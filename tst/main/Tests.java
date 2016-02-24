@@ -1,11 +1,21 @@
 package main;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+
+import javax.xml.parsers.SAXParserFactory;
+
 import org.junit.Test;
+import org.xml.sax.InputSource;
 
 import data.Episode;
+import data.Series;
 import db.thetvdb.TheTvDbDatabase;
+import db.thetvdb.xml.BaseSeriesXmlHandler;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 public class Tests {
 
@@ -38,5 +48,34 @@ public class Tests {
 	    assertEquals("Episode number does not match", 1, e.getEpisodeNum());
 
 		System.out.println(e);
+	}
+
+    @Test
+    public void testMom3x1() throws Exception {
+        TheTvDbDatabase db = new TheTvDbDatabase("en");
+        db.initialize();
+
+        Episode e = db.lookup("Mom", 3, 12);
+        assertNotNull("Episode not linked to Series", e.getSeries());
+        assertEquals("Fanart name doesn't match", "Mom", e.getSeries().getOriginalName());
+        assertEquals("Episode title does not match", "Diabetic Lesbians and a Blushing Bride", e.getEpisodeTitle());
+        assertEquals("Season number does not match", 3, e.getSeasonNum());
+        assertEquals("Episode number does not match", 12, e.getEpisodeNum());
+
+        System.out.println(e);
+    }
+	@Test
+	public void testBadUTFFileXml() throws Exception {
+	    File seriesIdFile = new File("266967.xml");
+
+	    Series series = new Series();
+
+	    InputStream inputStream= new FileInputStream(seriesIdFile);
+	    Reader reader = new InputStreamReader(inputStream,"UTF-8");
+
+	    InputSource is = new InputSource(reader);
+	    is.setEncoding("UTF-8");
+        SAXParserFactory.newInstance().newSAXParser().parse(is/*seriesIdFile*/, new BaseSeriesXmlHandler(series));
+
 	}
 }

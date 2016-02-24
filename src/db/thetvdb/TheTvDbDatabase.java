@@ -3,11 +3,14 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -22,6 +25,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import data.Banner;
@@ -206,10 +210,25 @@ public class TheTvDbDatabase {
 		}
 
 		Series series = new Series();
+		//TODO try with resources
+		InputStream inputStream = null;
 		try {
-			SAXParserFactory.newInstance().newSAXParser().parse(seriesIdFile, new BaseSeriesXmlHandler(series));
+		    inputStream = new FileInputStream(seriesIdFile);
+		    Reader reader = new InputStreamReader(inputStream,"UTF-8");
+
+		    InputSource is = new InputSource(reader);
+		    is.setEncoding("UTF-8");
+			SAXParserFactory.newInstance().newSAXParser().parse(is, new BaseSeriesXmlHandler(series));
 		} catch (Exception e) {
 			throw new DatabaseProcessingException("Could not retrieve series information.  Error:" + e.getMessage(), e);
+		} finally {
+		    if(inputStream != null) {
+		        try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    System.err.println("Failed to close series information file.");
+                }
+		    }
 		}
 
 		return series;
