@@ -1,15 +1,12 @@
 package db.thetvdb;
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -25,6 +22,8 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -40,12 +39,11 @@ import db.thetvdb.xml.EpisodeXmlHandler;
 import db.thetvdb.xml.MirrorXmlHandler;
 import db.thetvdb.xml.SeriesXmlHandler;
 import main.GlobalConfig;
-import util.io.IterableBufferedReader;
 
 
 public class TheTvDbDatabase {
     private static final String BASE_URL = "http://thetvdb.com";
-	private static final String CACHE_DIR = "cache/";
+	private static final File CACHE_DIR = new File("cache/");
 	private static final String API_KEY = "3D94331EFB6E696C";
 	private static final String MIRROR_FILE_URL = "http://www.thetvdb.com/api/" + API_KEY + "/mirrors.xml";
 	private static final String LOCAL_MIRROR_FILE = "mirrors.xml";
@@ -60,24 +58,21 @@ public class TheTvDbDatabase {
 	}
 
 	public static void clearCaches() {
-		File cacheDir = new File(CACHE_DIR);
-		if(cacheDir.exists()) {
-			for(File f : cacheDir.listFiles()) {
-				//This fails if a directory is not empty, but there should be no directories in here
-				f.delete();
+		if(CACHE_DIR.exists()) {
+			for(File f : CACHE_DIR.listFiles()) {
+				FileUtils.deleteQuietly(f);
 			}
 		}
 	}
 
 	public void initialize() throws DatabaseInitializationException {
-		File cacheDir = new File(CACHE_DIR);
-		if(!cacheDir.exists()) {
-			if(!cacheDir.mkdirs()) {
+		if(!CACHE_DIR.exists()) {
+			if(!CACHE_DIR.mkdirs()) {
 				throw new DatabaseInitializationException("Faile to create cache directory: " + CACHE_DIR);
 			}
 		}
 
-		File mirrorList = new File(CACHE_DIR + LOCAL_MIRROR_FILE);
+		File mirrorList = new File(CACHE_DIR, LOCAL_MIRROR_FILE);
 
 		if(!mirrorList.exists() ||
 	       (System.currentTimeMillis() - mirrorList.lastModified() >
@@ -116,8 +111,7 @@ public class TheTvDbDatabase {
 
 		List<Banner> banners = new ArrayList<Banner>();
 		try {
-			SAXParserFactory.newInstance().newSAXParser().parse(
-					bannerUrl.openStream(), new BannerXmlHandler(banners, new BannerFilter(lang)));
+		    parser().parse(bannerUrl.openStream(), new BannerXmlHandler(banners, new BannerFilter(lang)));
 		} catch (Exception e) {
 			throw new DatabaseProcessingException("Could not retrieve episode information.  Error:" + e.getMessage(), e);
 		}
@@ -125,7 +119,8 @@ public class TheTvDbDatabase {
 		return banners;
 	}
 
-	public void downloadBanner(Banner banner, String dir) throws DatabaseProcessingException {
+
+    public void downloadBanner(Banner banner, String dir) throws DatabaseProcessingException {
 		StringBuffer urlPath = new StringBuffer();
 		urlPath.append(BASE_URL).append("/banners/");
 		urlPath.append(banner.getBannerPath());
@@ -181,7 +176,7 @@ public class TheTvDbDatabase {
 	}
 
 	public Series lookup(String seriesId) throws DatabaseProcessingException {
-		File seriesIdFile = new File(CACHE_DIR + seriesId + ".xml");
+		File seriesIdFile = new File(CACHE_DIR,  seriesId + ".xml");
 
 		if(!seriesIdFile.exists()) {
 			StringBuffer urlPath = new StringBuffer();
@@ -197,20 +192,13 @@ public class TheTvDbDatabase {
 			}
 
 			try {
-				PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(seriesIdFile)));
-				IterableBufferedReader in = new IterableBufferedReader(new InputStreamReader(seriesUrl.openStream()));
-				for(String s : in)
-					out.println(s);
-
-				in.close();
-				out.close();
-			} catch (IOException ioe) {
-				throw new RuntimeException("Failed to store series information.  Error: " + ioe.getMessage(), ioe);
+			    FileUtils.copyURLToFile(seriesUrl, seriesIdFile);
+			} catch (IOException e) {
+				throw new RuntimeException("Failed to store series information.  Error: " + e.getMessage(), e);
 			}
 		}
 
 		Series series = new Series();
-		//TODO try with resources
 		InputStream inputStream = null;
 		try {
 		    inputStream = new FileInputStream(seriesIdFile);
@@ -218,17 +206,11 @@ public class TheTvDbDatabase {
 
 		    InputSource is = new InputSource(reader);
 		    is.setEncoding("UTF-8");
-			SAXParserFactory.newInstance().newSAXParser().parse(is, new BaseSeriesXmlHandler(series));
+		    parser().parse(is, new BaseSeriesXmlHandler(series));
 		} catch (Exception e) {
 			throw new DatabaseProcessingException("Could not retrieve series information.  Error:" + e.getMessage(), e);
 		} finally {
-		    if(inputStream != null) {
-		        try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    System.err.println("Failed to close series information file.");
-                }
-		    }
+		    IOUtils.closeQuietly(inputStream);
 		}
 
 		return series;
@@ -252,7 +234,7 @@ public class TheTvDbDatabase {
 		Episode episode = new Episode();
         SAXParser parser;
         try {
-            parser = SAXParserFactory.newInstance().newSAXParser();
+            parser = parser();
         } catch (ParserConfigurationException e) {
             throw new DatabaseProcessingException("Failed to create SAX Parser", e);
         } catch (SAXException e) {
@@ -279,7 +261,7 @@ public class TheTvDbDatabase {
 
 	private String getSeriesId(String seriesName) {
 		boolean writeUpdates = true;
-		File seriesIdFile = new File(CACHE_DIR + SERIES_ID_FILE);
+		File seriesIdFile = new File(CACHE_DIR, SERIES_ID_FILE);
 
 		if(seriesIds == null) {
 			seriesIds = new Properties();
@@ -288,12 +270,17 @@ public class TheTvDbDatabase {
 					System.out.println("Loading Series ID cache from " + seriesIdFile.getAbsolutePath());
 				}
 
+				InputStream in = null;
 				try {
-					seriesIds.load(new BufferedReader(new FileReader(seriesIdFile)));
+				    in = FileUtils.openInputStream(seriesIdFile);
+					seriesIds.load(in);
 				} catch (IOException e) {
 					writeUpdates = false;
 					System.err.println("Could not load Series ID file.  Updates will not be written to disk. File: " + seriesIdFile.getAbsolutePath());
+				} finally {
+				    IOUtils.closeQuietly(in);
 				}
+
 			} else {
 				System.out.println("Series ID cache file not found at: " + seriesIdFile.getAbsolutePath());
 			}
@@ -335,7 +322,7 @@ public class TheTvDbDatabase {
 		}
 		List<Series> seriesList = new ArrayList<Series>();
 		try {
-			SAXParserFactory.newInstance().newSAXParser().parse(seriesUrl.openStream(), new SeriesXmlHandler(seriesList));
+		    parser().parse(seriesUrl.openStream(), new SeriesXmlHandler(seriesList));
 		} catch (Exception e) {
 			System.out.println("Failed to retrieve series id for series: " + seriesName);
 			return null;
@@ -362,7 +349,7 @@ public class TheTvDbDatabase {
 			throw new DatabaseInitializationException("Bad URL for mirrors file.  This is most likely a configuration issue", mue);
 		}
 
-		File tmpFile = new File(CACHE_DIR + "_" + LOCAL_MIRROR_FILE);
+		File tmpFile = new File(CACHE_DIR, "_" + LOCAL_MIRROR_FILE);
 		if(tmpFile.exists()) {
 			if(!tmpFile.delete()) {
 				System.out.println("Could not delete temporary file.  Attempting to continue anyway.  File: " + tmpFile.getAbsolutePath());
@@ -370,18 +357,12 @@ public class TheTvDbDatabase {
 		}
 
 		try {
-			PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(tmpFile)));
-			IterableBufferedReader in = new IterableBufferedReader(new InputStreamReader(mirrorUrl.openStream()));
-			for(String s : in)
-				out.println(s);
-
-			in.close();
-			out.close();
+		    FileUtils.copyURLToFile(mirrorUrl, tmpFile);
 		} catch (IOException ioe) {
 			throw new DatabaseInitializationException("Failed to retrieve mirror list.", ioe);
 		}
 
-		File outFile = new File(CACHE_DIR + LOCAL_MIRROR_FILE);
+		File outFile = new File(CACHE_DIR, LOCAL_MIRROR_FILE);
 		if(outFile.exists()) {
 			if(!outFile.delete()) {
 				System.out.println("Could not delete temporary file.  Attempting to continue anyway.  File: " + outFile.getAbsolutePath());
@@ -396,6 +377,10 @@ public class TheTvDbDatabase {
 
 	private void parseMirrors() throws SAXException, IOException, ParserConfigurationException {
 		mirrors = new ArrayList<Mirror>();
-		SAXParserFactory.newInstance().newSAXParser().parse(new File(CACHE_DIR + LOCAL_MIRROR_FILE), new MirrorXmlHandler(mirrors));
+		parser().parse(new File(CACHE_DIR, LOCAL_MIRROR_FILE), new MirrorXmlHandler(mirrors));
+	}
+
+	private SAXParser parser() throws ParserConfigurationException, SAXException{
+	    return SAXParserFactory.newInstance().newSAXParser();
 	}
 }

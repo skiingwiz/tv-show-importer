@@ -11,6 +11,8 @@ sourceSets {
 }
 
 dependencies {
+   compile group: 'commons-io', name: 'commons-io', version: '[2.4, 3)'
+
    testCompile group: 'junit', name: 'junit', version: '4.12+'
 }
 
@@ -25,13 +27,18 @@ processResources{
     filter ReplaceTokens, tokens:['version': version]
  }
 
-task publish(type: Zip, dependsOn: [build, processScriptsResources]) {
-    configurations.runtime.allDependencies.each {
-        it.path
-    }
+processScriptsResources {
+    String classpath = configurations.runtime*.name.join(':')
+    String jarName = tasks.jar.outputs.files.singleFile.name
     
+    filter ReplaceTokens, tokens:['jar.name': jarName, 
+        'classpath': classpath]
+}
+
+task publish(type: Zip, dependsOn: [build, processScriptsResources]) {
     from tasks.jar.outputs.files
     from tasks.processScriptsResources.outputs.files
+    from configurations.runtime
 }
 
 jar {
