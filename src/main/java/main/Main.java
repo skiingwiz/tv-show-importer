@@ -1,9 +1,14 @@
 package main;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.regex.Matcher;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.FileFilterUtils;
 
 import data.Banner;
 import data.Episode;
@@ -22,22 +27,27 @@ public class Main {
 			System.exit(0);
 		}
 
-		if(GlobalConfig.getOptions().getBoolean(GlobalConfig.CLEAR_CACHE)) {
-			TheTvDbDatabase.clearCaches();
-		}
-
 		String lang = GlobalConfig.getOptions().getString(GlobalConfig.LANGUAGE);
 		db = new TheTvDbDatabase(lang);
+
+		if(GlobalConfig.getOptions().getBoolean(GlobalConfig.CLEAR_CACHE)) {
+            db.clearCaches();
+        }
+
 		db.initialize();
 
+		boolean largestFile = GlobalConfig.getOptions().getBoolean(GlobalConfig.LARGEST_FILE_IN_DIR);
 
 		for(String s : GlobalConfig.getOptions().getPositionals()) {
-			processFile(new File(s));
-
+		    File file = new File(s);
+		    if(largestFile) {
+		        file = preprocessLargestFile(file);
+		    }
+			processFile(file);
 		}
 	}
 
-	private static void processFile(File f) {
+    private static void processFile(File f) {
 		if(f.exists()) {
 			if(f.isDirectory()) {
 				if(GlobalConfig.getOptions().getBoolean(GlobalConfig.RECURSE)) {
@@ -221,5 +231,37 @@ public class Main {
 		} catch (IOException ioe) {
 			System.err.println("Could not write properties file.  Error: " + ioe.getMessage());
 		}
+	}
+
+	private static File preprocessLargestFile(File file) throws IOException {
+	    File dir = file.isDirectory() ? file : file.getParentFile();
+
+	    File largestFile = null;
+	    BigInteger largestSize = BigInteger.ZERO;
+
+	    for(File child : dir.listFiles((FileFilter)FileFilterUtils.fileFileFilter())) {
+	        BigInteger size = FileUtils.sizeOfAsBigInteger(child);
+	        if(size.compareTo(largestSize) > 0) {
+	            largestFile = child;
+	            largestSize = size;
+	        }
+	    }
+
+	    if(largestFile == null) {
+	        System.err.println("Internal Error calculating largest file");
+	        throw new IllegalStateException("Internal Error calculating largest file");
+	    }
+
+	    try {
+            FileUtils.moveFileToDirectory(largestFile, dir.getParentFile(), false);
+            largestFile = new File(dir.getParentFile(), largestFile.getName());
+        } catch (IOException e) {
+            System.out.println("Failed to move file: " + largestFile.getAbsolutePath());
+            throw e;
+        }
+
+	    FileUtils.deleteQuietly(dir);
+
+	    return largestFile;
 	}
 }

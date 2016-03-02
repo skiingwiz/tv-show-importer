@@ -43,7 +43,6 @@ import main.GlobalConfig;
 
 public class TheTvDbDatabase {
     private static final String BASE_URL = "http://thetvdb.com";
-	private static final File CACHE_DIR = new File("cache/");
 	private static final String API_KEY = "3D94331EFB6E696C";
 	private static final String MIRROR_FILE_URL = "http://www.thetvdb.com/api/" + API_KEY + "/mirrors.xml";
 	private static final String LOCAL_MIRROR_FILE = "mirrors.xml";
@@ -52,27 +51,35 @@ public class TheTvDbDatabase {
 	private List<Mirror> mirrors;
 	private Properties seriesIds;
 	private String lang;
+	private File cacheDir;
 
 	public TheTvDbDatabase(String lang) {
 		this.lang = lang;
+		String cacheName = GlobalConfig.getOptions().getString(GlobalConfig.CACHE_DIR);
+		cacheDir = new File(cacheName);
 	}
 
-	public static void clearCaches() {
-		if(CACHE_DIR.exists()) {
-			for(File f : CACHE_DIR.listFiles()) {
+	public TheTvDbDatabase(String lang, File cacheDir) {
+        this.lang = lang;
+        this.cacheDir = cacheDir;
+    }
+
+	public void clearCaches() {
+		if(cacheDir.exists()) {
+			for(File f : cacheDir.listFiles()) {
 				FileUtils.deleteQuietly(f);
 			}
 		}
 	}
 
 	public void initialize() throws DatabaseInitializationException {
-		if(!CACHE_DIR.exists()) {
-			if(!CACHE_DIR.mkdirs()) {
-				throw new DatabaseInitializationException("Faile to create cache directory: " + CACHE_DIR);
+		if(!cacheDir.exists()) {
+			if(!cacheDir.mkdirs()) {
+				throw new DatabaseInitializationException("Faile to create cache directory: " + cacheDir);
 			}
 		}
 
-		File mirrorList = new File(CACHE_DIR, LOCAL_MIRROR_FILE);
+		File mirrorList = new File(cacheDir, LOCAL_MIRROR_FILE);
 
 		if(!mirrorList.exists() ||
 	       (System.currentTimeMillis() - mirrorList.lastModified() >
@@ -176,7 +183,7 @@ public class TheTvDbDatabase {
 	}
 
 	public Series lookup(String seriesId) throws DatabaseProcessingException {
-		File seriesIdFile = new File(CACHE_DIR,  seriesId + ".xml");
+		File seriesIdFile = new File(cacheDir,  seriesId + ".xml");
 
 		if(!seriesIdFile.exists()) {
 			StringBuffer urlPath = new StringBuffer();
@@ -261,7 +268,7 @@ public class TheTvDbDatabase {
 
 	private String getSeriesId(String seriesName) {
 		boolean writeUpdates = true;
-		File seriesIdFile = new File(CACHE_DIR, SERIES_ID_FILE);
+		File seriesIdFile = new File(cacheDir, SERIES_ID_FILE);
 
 		if(seriesIds == null) {
 			seriesIds = new Properties();
@@ -349,7 +356,7 @@ public class TheTvDbDatabase {
 			throw new DatabaseInitializationException("Bad URL for mirrors file.  This is most likely a configuration issue", mue);
 		}
 
-		File tmpFile = new File(CACHE_DIR, "_" + LOCAL_MIRROR_FILE);
+		File tmpFile = new File(cacheDir, "_" + LOCAL_MIRROR_FILE);
 		if(tmpFile.exists()) {
 			if(!tmpFile.delete()) {
 				System.out.println("Could not delete temporary file.  Attempting to continue anyway.  File: " + tmpFile.getAbsolutePath());
@@ -362,7 +369,7 @@ public class TheTvDbDatabase {
 			throw new DatabaseInitializationException("Failed to retrieve mirror list.", ioe);
 		}
 
-		File outFile = new File(CACHE_DIR, LOCAL_MIRROR_FILE);
+		File outFile = new File(cacheDir, LOCAL_MIRROR_FILE);
 		if(outFile.exists()) {
 			if(!outFile.delete()) {
 				System.out.println("Could not delete temporary file.  Attempting to continue anyway.  File: " + outFile.getAbsolutePath());
@@ -377,7 +384,7 @@ public class TheTvDbDatabase {
 
 	private void parseMirrors() throws SAXException, IOException, ParserConfigurationException {
 		mirrors = new ArrayList<Mirror>();
-		parser().parse(new File(CACHE_DIR, LOCAL_MIRROR_FILE), new MirrorXmlHandler(mirrors));
+		parser().parse(new File(cacheDir, LOCAL_MIRROR_FILE), new MirrorXmlHandler(mirrors));
 	}
 
 	private SAXParser parser() throws ParserConfigurationException, SAXException{

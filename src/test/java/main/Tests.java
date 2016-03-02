@@ -7,62 +7,55 @@ import java.io.Reader;
 
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.commons.io.FileUtils;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.xml.sax.InputSource;
 
-import data.Episode;
 import data.Series;
-import db.thetvdb.TheTvDbDatabase;
 import db.thetvdb.xml.BaseSeriesXmlHandler;
 
 import static org.junit.Assert.*;
 
 public class Tests {
 
-	//This is a vanilla test that should work out of the box
-	@Test
-	public void testBones5x1() throws Exception {
-		TheTvDbDatabase db = new TheTvDbDatabase("en");
-		db.initialize();
 
-		Episode e = db.lookup("Bones", 5, 1);
-
-		assertEquals("Episode title does not match", "Harbingers in the Fountain", e.getEpisodeTitle());
-		assertEquals("Season number does not match", 5, e.getSeasonNum());
-		assertEquals("Episode number does not match", 1, e.getEpisodeNum());
-
-		System.out.println(e);
-	}
-
-	//This is a test that requires a lookup override in the series id file
-	//@Test
-	public void testCastle5x1() throws Exception {
-		TheTvDbDatabase db = new TheTvDbDatabase("en");
-		db.initialize();
-
-		Episode e = db.lookup("Castle", 5, 1);
-		assertNotNull("Episode not linked to Series", e.getSeries());
-		assertEquals("Fanart name doesn't match", "Castle (2009)", e.getSeries().getOriginalName());
-	    assertEquals("Episode title does not match", "After The Storm", e.getEpisodeTitle());
-	    assertEquals("Season number does not match", 5, e.getSeasonNum());
-	    assertEquals("Episode number does not match", 1, e.getEpisodeNum());
-
-		System.out.println(e);
-	}
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
 
     @Test
-    public void testMom3x1() throws Exception {
-        TheTvDbDatabase db = new TheTvDbDatabase("en");
-        db.initialize();
+    public void testLargestFilePreprocessing() throws Exception {
+        File dir = folder.newFolder("Bones", "some_other_folder");
 
-        Episode e = db.lookup("Mom", 3, 12);
-        assertNotNull("Episode not linked to Series", e.getSeries());
-        assertEquals("Fanart name doesn't match", "Mom", e.getSeries().getOriginalName());
-        assertEquals("Episode title does not match", "Diabetic Lesbians and a Blushing Bride", e.getEpisodeTitle());
-        assertEquals("Season number does not match", 3, e.getSeasonNum());
-        assertEquals("Episode number does not match", 12, e.getEpisodeNum());
+        File showDir = dir.getParentFile();
+        File seasonDir = new File(showDir, "Season 2");
 
-        System.out.println(e);
+        File file1 = new File(dir, "5x01_some_file.mkv");
+        File file2 = new File(dir, "4x02_some_file.mkv");
+        File file3 = new File(dir, "3x03_some_file.mkv");
+        File file4 = new File(dir, "2x04_some_file.mkv");
+        File file5 = new File(dir, "1x05_some_file.mkv");
+
+        FileUtils.writeStringToFile(file1, "A string");
+        FileUtils.writeStringToFile(file2, "A string2");
+        FileUtils.writeStringToFile(file3, "A string33");
+        FileUtils.writeStringToFile(file4, "A string that is obviously the longest");
+        FileUtils.writeStringToFile(file5, "A string here too");
+
+        String[] args = {"--cache-dir", folder.newFolder().getAbsolutePath(),
+                "--no-fanart", "--preprocess-largest-file-in-dir", file1.getAbsolutePath()};
+        Main.main(args);
+
+        assertFalse(dir.exists());
+        assertTrue(showDir.exists());
+        assertTrue(seasonDir.exists());
+
+        File[] files = seasonDir.listFiles();
+        assertEquals(2, files.length);
+        assertTrue(files[0].getName().startsWith("02x04"));
+        assertTrue(files[0].getName().endsWith(".mkv"));
+        assertEquals(files[0].getName() + ".properties", files[1].getName());
     }
 
 	@Test
