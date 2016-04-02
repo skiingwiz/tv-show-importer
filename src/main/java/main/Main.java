@@ -9,6 +9,8 @@ import java.util.regex.Matcher;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import data.Banner;
 import data.Episode;
@@ -19,8 +21,19 @@ import db.thetvdb.TheTvDbDatabase;
 public class Main {
 	private static TheTvDbDatabase db;
 
+	private final Logger log = LoggerFactory.getLogger(getClass());
+
 	public static void main(String[] args) throws Exception {
+	    new Main().process(args);
+	}
+
+	private void process(String[] args) throws Exception {
 		GlobalConfig.parse(args);
+
+		//TODO verbose doesn't do anything now that logging is slf4j
+		if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERBOSE)) {
+		    System.setProperty("tvshow.logging.console", "debug");
+		}
 
 		if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERSION)) {
 			System.out.println(Version.getFullNameVersion());
@@ -47,7 +60,7 @@ public class Main {
 		}
 	}
 
-    private static void processFile(File f) {
+    private void processFile(File f) {
 		if(f.exists()) {
 			if(f.isDirectory()) {
 				if(GlobalConfig.getOptions().getBoolean(GlobalConfig.RECURSE)) {
@@ -55,7 +68,7 @@ public class Main {
 						processFile(sf);
 					}
 				} else {
-					System.out.println("Given file is a directory and there is no recursion.  File: " + f.getName());
+					log.info("Given file is a directory and there is no recursion.  File: {}", f.getName());
 				}
 			} else {
 				boolean process = true;
@@ -64,14 +77,7 @@ public class Main {
 					if(f.getName().endsWith(s)) {
 						process = false;
 
-						if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERBOSE)) {
-							StringBuffer sb = new StringBuffer();
-							sb.append("Skipping file because of ending.  File: ");
-							sb.append(f.getName()).append(" Ending: ");
-							sb.append(s);
-							System.out.println(sb.toString());
-						}
-
+						log.debug("Skipping file because of ending.  File: {} Ending: {}", f.getName(), s);
 						break;
 					}
 				}
@@ -96,19 +102,19 @@ public class Main {
 							}
 						}
 					} catch(DatabaseProcessingException | FailedRenameException e) {
-						System.err.println("Skipping file due to error.  file: " + f.getPath() + " Error: " + e.getLocalizedMessage());
+						log.error("Skipping file due to error.  file: {}", f.getPath(), e);
 					}
 				}
 			}
 		} else {
-			System.err.println("File: " + f.getPath() + " does not exist.");
+			log.error("File: {} does not exist.", f.getPath());
 		}
 	}
 
-	private static void storeFanart(Episode e) throws DatabaseProcessingException {
+	private void storeFanart(Episode e) throws DatabaseProcessingException {
 		String fanartDir = GlobalConfig.getOptions().getString(GlobalConfig.FANART_DIR);
 		if(fanartDir == null) {
-			System.err.println("Fanart is enabled, but no directory is specified.  Fanart will NOT be downloaded");
+			log.error("Fanart is enabled, but no directory is specified.  Fanart will NOT be downloaded");
 			return;
 		}
 
@@ -125,8 +131,8 @@ public class Main {
 				try {
 					season = Integer.parseInt(b.getSeason());
 				} catch(NumberFormatException nfe) {
-					System.err.println("Problem determining season for banner.  Season reported as: " +
-							b.getSeason());
+					log.error("Problem determining season for banner.  Season reported as: {}",
+							b.getSeason(), nfe);
 					continue;
 				}
 
@@ -148,26 +154,22 @@ public class Main {
 					b.getBannerType2().equalsIgnoreCase("graphical")) {
 				dir.append("Banners").append(File.separator);
 			} else {
-				System.out.print("Skipping banner because it is of undesired type. Banner: ");
-				System.out.print(b.getBannerName());
-				System.out.print(" Type: ");
-				System.out.print(b.getBannerType());
-				System.out.print(" Type2: ");
-				System.out.println(b.getBannerType2());
+			    log.info("Skipping banner because it is of undesired type. Banner: {} Type: {} Type2: {}",
+			            b.getBannerName(), b.getBannerType(), b.getBannerType2());
 				continue;
 			}
 
-			System.out.println("Downloading banner " + b.getBannerName());
+			log.info("Downloading banner {}", b.getBannerName());
 			try {
 				db.downloadBanner(b, dir.toString());
 			} catch(DatabaseProcessingException dbe) {
 				//TODO make a separate exception that inherits from DatabaseProcessingException
-				System.err.println(dbe.getLocalizedMessage());
+				log.error("Failure downloading banner {} to {}", b, dir, dbe);
 			}
 		}
 	}
 
-	private static File renameFile(File f, Episode e, String pattern) throws FailedRenameException {
+	private File renameFile(File f, Episode e, String pattern) throws FailedRenameException {
 		//TODO option to specify decimal format in variable e.g. %season-num{00}%
 		DecimalFormat df = new DecimalFormat("00");
 
@@ -209,13 +211,13 @@ public class Main {
 		newName += oldName.substring(oldName.lastIndexOf("."));
 
 
-		System.out.println("Renaming " + f.getPath() + " to " + newName);
+		log.info("Renaming {} to {}", f.getPath(), newName);
 		File newFile = new File(newName);
 		if(f.renameTo(newFile)) {
-			System.out.println("File renaming successful.");
+			log.info("File renaming successful.");
 		} else {
 		    String msg = "Failed to rename " + f.getName() + " to " + newName;
-			System.err.println(msg);
+			log.error(msg);
 			//newFile = f;
 			throw new FailedRenameException(f, newFile, msg);
 		}
@@ -225,22 +227,25 @@ public class Main {
 		return newFile;
 	}
 
-	private static void writeFile(File f, Episode e) {
+	private void writeFile(File f, Episode e) {
 		try {
 			new PropertiesFileWriter().writeFile(f, e);
 		} catch (IOException ioe) {
-			System.err.println("Could not write properties file.  Error: " + ioe.getMessage());
+			log.error("Could not write episode {} properties file {}", e, f, ioe);
 		}
 	}
 
-	private static File preprocessLargestFile(File file) throws IOException {
+	private File preprocessLargestFile(File file) throws IOException {
+	    log.debug("Processing Largest File {}", file);
 	    File dir = file.isDirectory() ? file : file.getParentFile();
+	    log.info("Looking for largest file in {}", dir);
 
 	    File largestFile = null;
 	    BigInteger largestSize = BigInteger.ZERO;
 
 	    for(File child : dir.listFiles((FileFilter)FileFilterUtils.fileFileFilter())) {
 	        BigInteger size = FileUtils.sizeOfAsBigInteger(child);
+	        log.debug("Looking at file {} with size {}", child, size);
 	        if(size.compareTo(largestSize) > 0) {
 	            largestFile = child;
 	            largestSize = size;
@@ -248,15 +253,17 @@ public class Main {
 	    }
 
 	    if(largestFile == null) {
-	        System.err.println("Internal Error calculating largest file");
+	        log.error("Internal Error calculating largest file");
 	        throw new IllegalStateException("Internal Error calculating largest file");
 	    }
+
+	    log.info("Found largest file {}", largestFile);
 
 	    try {
             FileUtils.moveFileToDirectory(largestFile, dir.getParentFile(), false);
             largestFile = new File(dir.getParentFile(), largestFile.getName());
         } catch (IOException e) {
-            System.out.println("Failed to move file: " + largestFile.getAbsolutePath());
+            log.error("Failed to move file: {}", largestFile.getAbsolutePath(), e);
             throw e;
         }
 

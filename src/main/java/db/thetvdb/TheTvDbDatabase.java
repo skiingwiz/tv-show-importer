@@ -24,6 +24,8 @@ import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -47,6 +49,8 @@ public class TheTvDbDatabase {
 	private static final String MIRROR_FILE_URL = "http://www.thetvdb.com/api/" + API_KEY + "/mirrors.xml";
 	private static final String LOCAL_MIRROR_FILE = "mirrors.xml";
 	private static final String SERIES_ID_FILE = "series_ids.dat";
+
+	private final Logger log = LoggerFactory.getLogger(getClass());
 
 	private List<Mirror> mirrors;
 	private Properties seriesIds;
@@ -88,7 +92,7 @@ public class TheTvDbDatabase {
 				getMirrorList();
 			} catch (DatabaseInitializationException die) {
 				if(mirrorList.exists()) {
-					System.err.println("Could not update mirror list, proceeding with old list.");
+					log.error("Could not update mirror list, proceeding with old list.", die);
 				} else {
 					throw die;
 				}
@@ -152,9 +156,7 @@ public class TheTvDbDatabase {
 		filename.append(banner.getBannerName());
 		File fileD = new File(filename.toString());
 		if(fileD.exists()) {
-			if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERBOSE)) {
-				System.out.println("Skipping fanart file because it already exists.  File: " + fileD.getPath());
-			}
+		    log.debug("Skipping fanart file {} because it already exists.", fileD.getPath());
 		} else {
 			String imageFormat = GlobalConfig.getOptions().getString(GlobalConfig.IMAGE_FORMAT);
 
@@ -230,7 +232,7 @@ public class TheTvDbDatabase {
 		urlPath.append("/default/").append(seasonNum).append("/").append(episodeNum);
 		urlPath.append("/").append(lang).append(".xml");
 
-		System.out.println(urlPath);
+		log.debug("URL for {} season {} episode {} is {}", seriesId, seasonNum, episodeNum, urlPath);
 		URL episodeUrl;
 		try {
 			episodeUrl = new URL(urlPath.toString());
@@ -251,7 +253,7 @@ public class TheTvDbDatabase {
         try {
             parser.parse(episodeUrl.openStream(), new EpisodeXmlHandler(episode));
         } catch (Exception e) {
-            System.out.println("Couldn't parse XML as text, trying GZIP");
+            log.info("Couldn't parse XML as text, trying GZIP");
             //create a new Episode, just in case it was messed up above
             episode = new Episode();
             try {
@@ -273,9 +275,7 @@ public class TheTvDbDatabase {
 		if(seriesIds == null) {
 			seriesIds = new Properties();
 			if(seriesIdFile.exists()) {
-				if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERBOSE)){
-					System.out.println("Loading Series ID cache from " + seriesIdFile.getAbsolutePath());
-				}
+			    log.debug("Loading Series ID cache from ", seriesIdFile.getAbsolutePath());
 
 				InputStream in = null;
 				try {
@@ -283,13 +283,14 @@ public class TheTvDbDatabase {
 					seriesIds.load(in);
 				} catch (IOException e) {
 					writeUpdates = false;
-					System.err.println("Could not load Series ID file.  Updates will not be written to disk. File: " + seriesIdFile.getAbsolutePath());
+					log.error("Could not load Series ID file {}.  Updates will not be written to disk.",
+					        seriesIdFile.getAbsolutePath(), e);
 				} finally {
 				    IOUtils.closeQuietly(in);
 				}
 
 			} else {
-				System.out.println("Series ID cache file not found at: " + seriesIdFile.getAbsolutePath());
+				log.warn("Series ID cache file not found at {}", seriesIdFile.getAbsolutePath());
 			}
 		}
 
@@ -303,7 +304,8 @@ public class TheTvDbDatabase {
 					try {
 						seriesIds.store(new BufferedWriter(new FileWriter(seriesIdFile)), "");
 					} catch (IOException e) {
-						System.out.println("Could not save series id file.  Updates will not be written to disk. File: " + seriesIdFile.getAbsolutePath());
+						log.error("Could not save series id file {}.  Updates will not be written to disk.",
+						        seriesIdFile.getAbsolutePath(), e);
 					}
 				}
 			}
@@ -323,25 +325,25 @@ public class TheTvDbDatabase {
 		String urlPath = BASE_URL + "/api/GetSeries.php?seriesname=" + seriesNameEncode + "&language=" + lang;
 		try {
 			seriesUrl = new URL(urlPath);
-		} catch (MalformedURLException e1) {
-			System.out.println("Could not retrieve series id.  Bad URL: " + urlPath);
+		} catch (MalformedURLException e) {
+			log.error("Could not retrieve series id.  Bad URL: {}", urlPath, e);
 			return null;
 		}
 		List<Series> seriesList = new ArrayList<Series>();
 		try {
 		    parser().parse(seriesUrl.openStream(), new SeriesXmlHandler(seriesList));
 		} catch (Exception e) {
-			System.out.println("Failed to retrieve series id for series: " + seriesName);
+			log.error("Failed to retrieve series id for series {}", seriesName, e);
 			return null;
 		}
 
 		switch(seriesList.size()) {
 		case 0:
-			System.out.println("No series returned for search: " + seriesName);
+			log.info("No series returned for search {}", seriesName);
 			return null;
 			//break;
 		default:
-			System.out.println("More than one series returned for search.  Using first result.  Search: " + seriesName);
+			log.warn("More than one series returned for search {}.  Using first result.", seriesName);
 			//fall through
 		case 1:
 			return seriesList.get(0).getId();
@@ -359,7 +361,7 @@ public class TheTvDbDatabase {
 		File tmpFile = new File(cacheDir, "_" + LOCAL_MIRROR_FILE);
 		if(tmpFile.exists()) {
 			if(!tmpFile.delete()) {
-				System.out.println("Could not delete temporary file.  Attempting to continue anyway.  File: " + tmpFile.getAbsolutePath());
+				log.warn("Could not delete temporary file {}.  Attempting to continue anyway.", tmpFile.getAbsolutePath());
 			}
 		}
 
@@ -372,7 +374,7 @@ public class TheTvDbDatabase {
 		File outFile = new File(cacheDir, LOCAL_MIRROR_FILE);
 		if(outFile.exists()) {
 			if(!outFile.delete()) {
-				System.out.println("Could not delete temporary file.  Attempting to continue anyway.  File: " + outFile.getAbsolutePath());
+				log.warn("Could not delete temporary file {}.  Attempting to continue anyway.", outFile.getAbsolutePath());
 			}
 		}
 
