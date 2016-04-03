@@ -18,7 +18,7 @@ plugins {
 }
 apply plugin: 'version-injection'
 
-version = '1.2.2'
+version = '1.2.3'
 defaultTasks = ['clean','publish']
 
 sourceSets {

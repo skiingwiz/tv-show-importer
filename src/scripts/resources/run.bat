@@ -11,7 +11,7 @@ IF "%1"=="multi" (
 
 shift /1
 
-java -jar @jar.name@ --series-banners --season-banners --fanart-dir D:\Data\fanart\TV\ %multipleparam% %1 %2 %3 %4 %5 %6 %7 %8 %9
+java -Dlogback.configurationFile=./logback.groovy -jar @jar.name@ --series-banners --season-banners --fanart-dir D:\Data\fanart\TV\ %multipleparam% %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 pushd ..\sage-scripting-framework
 java -jar ssf.jar scripts\scanLibrary.py

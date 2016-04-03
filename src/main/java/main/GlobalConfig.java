@@ -5,7 +5,6 @@ import util.opt.Options;
 
 
 public class GlobalConfig {
-	public static final String VERBOSE = "verbose";
 	public static final String LANGUAGE = "language";
 	public static final String RENAME = "rename";
 	public static final String RENAME_PATTERN = "rename-pattern";
@@ -55,7 +54,6 @@ public class GlobalConfig {
 		parser = new OptionParser();
 		parser.setUsage("Usage: Main [options] file [file ...]");
 
-		parser.addOption('v', "verbose", GlobalConfig.VERBOSE, "Log (more) details of processing", OptionParser.Action.STORE_TRUE);
 		parser.addOption('l', "language", GlobalConfig.LANGUAGE, "Set the language for episode information.  Default is English", OptionParser.Action.STORE_VALUE, "en");
 		parser.addOption('n', "no-rename", GlobalConfig.RENAME, "Do not rename files as a part of processing", OptionParser.Action.STORE_FALSE, "true");
 

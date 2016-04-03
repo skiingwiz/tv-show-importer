@@ -28,12 +28,8 @@ public class Main {
 	}
 
 	private void process(String[] args) throws Exception {
+	    log.info("Invoked with args {}", (Object)args);
 		GlobalConfig.parse(args);
-
-		//TODO verbose doesn't do anything now that logging is slf4j
-		if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERBOSE)) {
-		    System.setProperty("tvshow.logging.console", "debug");
-		}
 
 		if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERSION)) {
 			System.out.println(Version.getFullNameVersion());

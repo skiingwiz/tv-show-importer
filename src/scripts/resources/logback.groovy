@@ -1,9 +1,4 @@
-//import ch.qos.logback.classic.Level;
-
 scan()
-
-//String prop = System.getProperty("tvshow.logging.console")
-//Level consoleLevel = prop == null ? INFO : Level.valueOf(prop);
 
 appender("FILE", FileAppender) {
     file = "tvimporter.log"
@@ -23,6 +18,9 @@ appender("FILE", FileAppender) {
 }
 
 appender("CONSOLE", ConsoleAppender) {
+    filter(ThresholdFilter) {
+        level = WARN
+      }
     encoder(PatternLayoutEncoder) {
         pattern = "%level %logger - %msg%n"
     }
