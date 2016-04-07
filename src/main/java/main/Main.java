@@ -256,7 +256,7 @@ public class Main {
 	    log.info("Found largest file {}", largestFile);
 
 	    try {
-            FileUtils.moveFileToDirectory(largestFile, dir.getParentFile(), false);
+	        persistantMove(largestFile, dir.getParentFile());
             largestFile = new File(dir.getParentFile(), largestFile.getName());
         } catch (IOException e) {
             log.error("Failed to move file: {}", largestFile.getAbsolutePath(), e);
@@ -266,5 +266,29 @@ public class Main {
 	    FileUtils.deleteQuietly(dir);
 
 	    return largestFile;
+	}
+
+	private void persistantMove(File file, File directory) throws IOException {
+	    int numTries = 10;
+	    boolean moved = false;
+	    for(int tries = 1; tries <= numTries && !moved; tries++) {
+	        try {
+                FileUtils.moveFileToDirectory(file, directory, false);
+                moved = true;
+            } catch (IOException e) {
+                log.warn("Failed to move file {} on try number {}", file, tries, e);
+                try {
+                    Thread.sleep(30_000);
+                } catch (InterruptedException ie) {
+                    log.error("Sleep interrupted", ie);
+                    Thread.currentThread().interrupt();
+                }
+            }
+	    }
+
+	    if(!moved) {
+	        log.error("Failed to move file {} to directory {} after {} tries", file, directory, numTries);
+	        throw new IOException("Failed to move file");
+	    }
 	}
 }
