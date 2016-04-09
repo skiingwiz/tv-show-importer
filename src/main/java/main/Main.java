@@ -207,16 +207,8 @@ public class Main {
 		newName += oldName.substring(oldName.lastIndexOf("."));
 
 
-		log.info("Renaming {} to {}", f.getPath(), newName);
-		File newFile = new File(newName);
-		if(f.renameTo(newFile)) {
-			log.info("File renaming successful.");
-		} else {
-		    String msg = "Failed to rename " + f.getName() + " to " + newName;
-			log.error(msg);
-			//newFile = f;
-			throw new FailedRenameException(f, newFile, msg);
-		}
+
+		File newFile = persistantRename(f, newName);
 
 		//update the last mod time to be sure sage re-import this
 		newFile.setLastModified(System.currentTimeMillis());
@@ -290,5 +282,32 @@ public class Main {
 	        log.error("Failed to move file {} to directory {} after {} tries", file, directory, numTries);
 	        throw new IOException("Failed to move file");
 	    }
+	}
+
+	private File persistantRename(File f, String newName) throws FailedRenameException {
+	    int numTries = 10;
+	    File newFile = new File(newName);
+	    boolean success = false;
+
+	    for(int tries = 1; tries <= numTries && !success; tries++) {
+	        success = f.renameTo(newFile);
+	        if(!success) {
+	            try {
+                    Thread.sleep(30_000);
+                } catch (InterruptedException ie) {
+                    log.error("Sleep interrupted", ie);
+                    Thread.currentThread().interrupt();
+                }
+	        }
+	    }
+
+	    if(success) {
+	        log.info("File renaming successful.");
+	    } else {
+	        log.error("Failed to rename {} to {} after {} tries", f, newFile, numTries);
+	        throw new FailedRenameException(f, newFile);
+	    }
+
+	    return newFile;
 	}
 }
