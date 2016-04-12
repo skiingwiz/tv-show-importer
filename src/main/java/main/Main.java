@@ -16,6 +16,7 @@ import data.Banner;
 import data.Episode;
 import db.DatabaseProcessingException;
 import db.thetvdb.TheTvDbDatabase;
+import util.ThreadUtils;
 
 //TODO handle replacing previous files when there is a PROPER file downloaded
 public class Main {
@@ -155,7 +156,7 @@ public class Main {
 				continue;
 			}
 
-			log.info("Downloading banner {}", b.getBannerName());
+			log.debug("Downloading banner {}", b.getBannerName());
 			try {
 				db.downloadBanner(b, dir.toString());
 			} catch(DatabaseProcessingException dbe) {
@@ -268,13 +269,8 @@ public class Main {
                 FileUtils.moveFileToDirectory(file, directory, false);
                 moved = true;
             } catch (IOException e) {
-                log.warn("Failed to move file {} on try number {}", file, tries, e);
-                try {
-                    Thread.sleep(30_000);
-                } catch (InterruptedException ie) {
-                    log.error("Sleep interrupted", ie);
-                    Thread.currentThread().interrupt();
-                }
+                log.debug("Failed to move file {} on try number {}", file, tries, e);
+                ThreadUtils.sleep(30_000);
             }
 	    }
 
@@ -287,17 +283,16 @@ public class Main {
 	private File persistantRename(File f, String newName) throws FailedRenameException {
 	    int numTries = 10;
 	    File newFile = new File(newName);
+	    if(f.equals(newFile)) {
+	        return f;
+	    }
+
 	    boolean success = false;
 
 	    for(int tries = 1; tries <= numTries && !success; tries++) {
 	        success = f.renameTo(newFile);
 	        if(!success) {
-	            try {
-                    Thread.sleep(30_000);
-                } catch (InterruptedException ie) {
-                    log.error("Sleep interrupted", ie);
-                    Thread.currentThread().interrupt();
-                }
+	            ThreadUtils.sleep(30_000);
 	        }
 	    }
 
