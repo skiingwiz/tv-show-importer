@@ -24,8 +24,8 @@ public class TheTvDbTests {
         Episode e = db.lookup("Bones", 5, 1);
 
         assertEquals("Episode title does not match", "Harbingers in the Fountain", e.getEpisodeTitle());
-        assertEquals("Season number does not match", 5, e.getSeasonNum());
-        assertEquals("Episode number does not match", 1, e.getEpisodeNum());
+        assertEquals("Season number does not match", (Integer)5, e.getSeasonNum());
+        assertEquals("Episode number does not match", (Integer)1, e.getEpisodeNum());
 
         System.out.println(e);
     }
@@ -39,8 +39,8 @@ public class TheTvDbTests {
         assertNotNull("Episode not linked to Series", e.getSeries());
         assertEquals("Fanart name doesn't match", "Castle (2009)", e.getSeries().getOriginalName());
         assertEquals("Episode title does not match", "After The Storm", e.getEpisodeTitle());
-        assertEquals("Season number does not match", 5, e.getSeasonNum());
-        assertEquals("Episode number does not match", 1, e.getEpisodeNum());
+        assertEquals("Season number does not match", (Integer)5, e.getSeasonNum());
+        assertEquals("Episode number does not match", (Integer)1, e.getEpisodeNum());
 
         System.out.println(e);
     }
@@ -53,8 +53,8 @@ public class TheTvDbTests {
         assertNotNull("Episode not linked to Series", e.getSeries());
         assertEquals("Fanart name doesn't match", "Mom", e.getSeries().getOriginalName());
         assertEquals("Episode title does not match", "Diabetic Lesbians and a Blushing Bride", e.getEpisodeTitle());
-        assertEquals("Season number does not match", 3, e.getSeasonNum());
-        assertEquals("Episode number does not match", 12, e.getEpisodeNum());
+        assertEquals("Season number does not match", (Integer)3, e.getSeasonNum());
+        assertEquals("Episode number does not match", (Integer)12, e.getEpisodeNum());
 
         System.out.println(e);
     }

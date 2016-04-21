@@ -6,10 +6,10 @@ import java.util.Date;
 
 public class Episode {
 //TODO what about multipart episodes?
-	
+
 	protected Series series;
-	protected int seasonNum;
-	protected int episodeNum;
+	protected Integer seasonNum;
+	protected Integer episodeNum;
 	protected String episodeTitle;
 	private String rating;
 	private String description;
@@ -17,7 +17,7 @@ public class Episode {
 	private String[] guestStars;
 	private Date firstAirDate;
 	private String originalFile;
-	
+
 	public String[] getWriter() {
 		return writer;
 	}
@@ -27,13 +27,13 @@ public class Episode {
 	public Series getSeries() {
 		return series;
 	}
-	public int getSeasonNum() {
+	public Integer getSeasonNum() {
 		return seasonNum;
 	}
 	public void setSeasonNum(int seasonNum) {
 		this.seasonNum = seasonNum;
 	}
-	public int getEpisodeNum() {
+	public Integer getEpisodeNum() {
 		return episodeNum;
 	}
 	public void setEpisodeNum(int episodeNum) {
@@ -52,46 +52,46 @@ public class Episode {
 	public void setWriters(String[] writer) {
 		this.writer = writer;
 	}
-	
+
 	public String[] getGuestStars() {
 		return guestStars;
 	}
-	
+
 	public void setGuestStars(String[] guestStars) {
 		this.guestStars = guestStars;
 	}
-	
+
 	@Override
 	public String toString() {
 		StringBuffer sb = new StringBuffer();
-		
+
 		sb.append("Show=").append(series == null ? "No Series" : series.getName()).append(",");
 		sb.append("Season=").append(seasonNum).append(",");
 		sb.append("Episode=").append(episodeNum);
-		
+
 		return sb.toString();
 	}
-	
+
 	public String getRating() {
 		return rating;
 	}
-	
+
 	public void setRating(String rating) {
 		this.rating = rating;
 	}
-	
+
 	public String getDescription() {
 		return description;
 	}
-	
+
 	public void setDescription(String description) {
 		this.description = description;
 	}
-	
+
 	public Date getFirstAirDate() {
 		return firstAirDate;
 	}
-	
+
 	public void setFirstAirDate(Date date) {
 		firstAirDate = date;
 	}
