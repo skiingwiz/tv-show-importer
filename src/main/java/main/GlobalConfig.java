@@ -1,4 +1,9 @@
 package main;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import util.opt.InvalidOptionException;
 import util.opt.OptionParser;
 import util.opt.Options;
@@ -21,9 +26,12 @@ public class GlobalConfig {
 	public static final String FANART = "fanart";
 	public static final String VERSION = "print-version";
 	public static final String LARGEST_FILE_IN_DIR = "preprocess-largest-file-in-dir";
+	public static final String CONFIG = "config";
 
 	private static OptionParser parser;
 	private static Options options;
+
+	private static Logger log = LoggerFactory.getLogger(GlobalConfig.class);
 
 	public static void setOptions(Options options) {
 		GlobalConfig.options = options;
@@ -34,30 +42,38 @@ public class GlobalConfig {
 			try {
 				parse(null);
 			} catch (InvalidOptionException e) {
-				//TODO log this
-			}
+			    log.error("Invalid options given.", e);
+			} catch (FileNotFoundException e) {
+                log.error("Given config file could not be found", e);
+            } catch (IOException e) {
+                log.error("Problem reading given config file", e);
+            }
 		}
 		return options;
 	}
 
-	public static void parse(String[] args) throws InvalidOptionException {
+	public static void parse(String[] args) throws InvalidOptionException, FileNotFoundException, IOException {
 		if(parser == null) {
 			setupOptions();
 		}
 
 		options = parser.parse(args);
+
+		String configFile = options.getString(CONFIG);
+		if(configFile != null) {
+		    Options fileOptions = parser.load(configFile);
+		    options = fileOptions.merge(options);
+		}
 	}
 
 	private static void setupOptions() {
-		//TODO add option to touch file
-
 		parser = new OptionParser();
 		parser.setUsage("Usage: Main [options] file [file ...]");
 
 		parser.addOption('l', "language", GlobalConfig.LANGUAGE, "Set the language for episode information.  Default is English", OptionParser.Action.STORE_VALUE, "en");
 		parser.addOption('n', "no-rename", GlobalConfig.RENAME, "Do not rename files as a part of processing", OptionParser.Action.STORE_FALSE, "true");
 
-		parser.addOption('c', "clear-cache", GlobalConfig.CLEAR_CACHE, "Clear TheTvDb.com cache before processing", OptionParser.Action.STORE_TRUE);
+		parser.addOption(OptionParser.NO_SHORTNAME, "clear-cache", GlobalConfig.CLEAR_CACHE, "Clear TheTvDb.com cache before processing", OptionParser.Action.STORE_TRUE);
 		parser.addOption(OptionParser.NO_SHORTNAME, GlobalConfig.CACHE_DIR, GlobalConfig.CACHE_DIR, "Set TheTvDb.com cache directory", OptionParser.Action.STORE_VALUE, "cache");
 		parser.addOption('x', "no-recurse", GlobalConfig.RECURSE, "Do not recurse through subdirectories when a directory is given.", OptionParser.Action.STORE_FALSE, "true");
 		parser.addOption('s', "series-banners", GlobalConfig.SERIES_BANNERS, "Download series banners.", OptionParser.Action.STORE_TRUE);
@@ -80,5 +96,7 @@ public class GlobalConfig {
 		parser.addOption(OptionParser.NO_SHORTNAME, GlobalConfig.LARGEST_FILE_IN_DIR, GlobalConfig.LARGEST_FILE_IN_DIR,
 		        "Special Preprocessing Step: Process largest file in the parent directory only",
 		        OptionParser.Action.STORE_TRUE);
+
+		parser.addOption('c', "config", GlobalConfig.CONFIG, "The path to a properties file for configuration.", OptionParser.Action.STORE_VALUE);
 	}
 }
