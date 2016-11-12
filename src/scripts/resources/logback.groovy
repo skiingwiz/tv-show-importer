@@ -1,6 +1,6 @@
 scan()
 
-appender("FILE", FileAppender) {
+appender("FILE", RollingFileAppender) {
     file = "tvimporter.log"
     append = true
     
@@ -18,14 +18,9 @@ appender("FILE", FileAppender) {
 }
 
 appender("CONSOLE", ConsoleAppender) {
-    filter(ThresholdFilter) {
-        level = WARN
-      }
     encoder(PatternLayoutEncoder) {
         pattern = "%level %logger - %msg%n"
     }
 }
-
-//logger("com.foo", INFO, ["CONSOLE"])
 
 root(INFO, ["CONSOLE", "FILE"])

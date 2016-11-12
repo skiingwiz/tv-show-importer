@@ -43,8 +43,8 @@ public class Tests {
         FileUtils.writeStringToFile(file4, "A string that is obviously the longest");
         FileUtils.writeStringToFile(file5, "A string here too");
 
-        String[] args = {"--cache-dir", folder.newFolder().getAbsolutePath(),
-                "--no-fanart", "--preprocess-largest-file-in-dir", file1.getAbsolutePath()};
+        String[] args = {"-Pcache-dir=" + folder.newFolder().getAbsolutePath(),
+                "-Pno-fanart", "-Ppreprocess-largest-file-in-dir", file1.getAbsolutePath()};
         Main.main(args);
 
         assertFalse(dir.exists());

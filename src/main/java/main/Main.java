@@ -10,12 +10,14 @@ import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
 import java.util.List;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import config.GlobalConfig;
 import data.Banner;
 import data.Episode;
 import db.DatabaseProcessingException;
@@ -33,25 +35,25 @@ public class Main {
 
     private void process(String[] args) throws Exception {
         log.info("Invoked with args {}", (Object)args);
-        GlobalConfig.parse(args);
+        List<String> positionals = GlobalConfig.parse(args);
 
-        if(GlobalConfig.getOptions().getBoolean(GlobalConfig.VERSION)) {
+        if(GlobalConfig.get().getBoolean(GlobalConfig.PRINT_VERSION)) {
             System.out.println(Version.getFullNameVersion());
             System.exit(0);
         }
 
-        String lang = GlobalConfig.getOptions().getString(GlobalConfig.LANGUAGE);
+        String lang = GlobalConfig.get().getString(GlobalConfig.LANGUAGE);
         db = new TheTvDbDatabase(lang);
 
-        if(GlobalConfig.getOptions().getBoolean(GlobalConfig.CLEAR_CACHE)) {
+        if(GlobalConfig.get().getBoolean(GlobalConfig.CLEAR_CACHE)) {
             db.clearCaches();
         }
 
         db.initialize();
 
-        boolean largestFile = GlobalConfig.getOptions().getBoolean(GlobalConfig.LARGEST_FILE_IN_DIR);
+        boolean largestFile = GlobalConfig.get().getBoolean(GlobalConfig.LARGEST_FILE_IN_DIR);
 
-        for(String s : GlobalConfig.getOptions().getPositionals()) {
+        for(String s : positionals) {
             File file = new File(s);
             if(largestFile) {
                 file = preprocessLargestFile(file);
@@ -63,7 +65,7 @@ public class Main {
     private void processFile(File f) {
         if(f.exists()) {
             if(f.isDirectory()) {
-                if(GlobalConfig.getOptions().getBoolean(GlobalConfig.RECURSE)) {
+                if(GlobalConfig.get().getBoolean(GlobalConfig.RECURSE)) {
                     for(File sf : f.listFiles()) {
                         processFile(sf);
                     }
@@ -72,12 +74,14 @@ public class Main {
                 }
             } else {
                 boolean process = true;
-                String[] exEndings = GlobalConfig.getOptions().getString(GlobalConfig.EXCLUDED_ENDINGS).split("\\|");
-                for(String s : exEndings) {
-                    if(f.getName().endsWith(s)) {
+                //TODO a way to pile these up in configs (Maybe use +=)
+                List<String> exPatterns = GlobalConfig.get().getStringList(GlobalConfig.EXCLUDE_PATTERNS);
+                for(String regex : exPatterns) {
+                    if(Pattern.compile(regex).matcher(f.getAbsolutePath()).find()) {
                         process = false;
 
-                        log.debug("Skipping file because of ending.  File: {} Ending: {}", f.getName(), s);
+                        log.debug("Skipping file because of exclusion pattern.  File: {} Pattern: {}",
+                                f.getAbsolutePath(), regex);
                         break;
                     }
                 }
@@ -88,17 +92,17 @@ public class Main {
                         e = db.lookup(e.getSeries().getName(), e.getSeasonNum(), e.getEpisodeNum());
                         if(e != null) {
                             e.setOriginalFile(f);
-                            if(GlobalConfig.getOptions().getBoolean(GlobalConfig.RENAME)) {
-                                String renamePattern = GlobalConfig.getOptions().getString(GlobalConfig.RENAME_PATTERN);
+                            if(GlobalConfig.get().getBoolean(GlobalConfig.RENAME)) {
+                                String renamePattern = GlobalConfig.get().getString(GlobalConfig.RENAME_PATTERN);
                                 boolean replaceFile = f.getName().matches("(?i).*proper.*");
                                 f = renameFile(f, e, renamePattern, replaceFile);
                             }
 
-                            if(GlobalConfig.getOptions().getBoolean(GlobalConfig.PROPERTIES_FILE)) {
+                            if(GlobalConfig.get().getBoolean(GlobalConfig.PROPERTIES_FILE)) {
                                 writeFile(f, e);
                             }
 
-                            if(GlobalConfig.getOptions().getBoolean(GlobalConfig.FANART)) {
+                            if(GlobalConfig.get().getBoolean(GlobalConfig.FANART)) {
                                 storeFanart(e);
                             }
                         }
@@ -113,7 +117,7 @@ public class Main {
     }
 
     private void storeFanart(Episode e) throws DatabaseProcessingException {
-        String fanartDir = GlobalConfig.getOptions().getString(GlobalConfig.FANART_DIR);
+        String fanartDir = GlobalConfig.get().getString(GlobalConfig.FANART_DIR);
         if(fanartDir == null) {
             log.error("Fanart is enabled, but no directory is specified.  Fanart will NOT be downloaded");
             return;

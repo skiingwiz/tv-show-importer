@@ -1,13 +1,13 @@
-package main;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+package config;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-import util.opt.InvalidOptionException;
-import util.opt.OptionParser;
-import util.opt.Options;
-
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
 
 public class GlobalConfig {
 	public static final String LANGUAGE = "language";
@@ -18,56 +18,61 @@ public class GlobalConfig {
 	public static final String RECURSE = "recurse";
 	public static final String SERIES_BANNERS = "series-banners";
 	public static final String SEASON_BANNERS = "season-banners";
-	public static final String EXCLUDED_ENDINGS = "excluded-endings";
+	public static final String EXCLUDE_PATTERNS = "excluded-endings";
 	public static final String MIRROR_FILE_LIFE = "mirror-file-life";
 	public static final String IMAGE_FORMAT = "image-format";
 	public static final String FANART_DIR = "fanart-dir";
 	public static final String PROPERTIES_FILE = "properties-file";
 	public static final String FANART = "fanart";
-	public static final String VERSION = "print-version";
+	public static final String PRINT_VERSION = "version";
 	public static final String LARGEST_FILE_IN_DIR = "preprocess-largest-file-in-dir";
-	public static final String CONFIG = "config";
 
-	private static OptionParser parser;
+	private static final String CONFIG = "config";
+
+	private static CompositeConfig config;
 	private static Options options;
 
-	private static Logger log = LoggerFactory.getLogger(GlobalConfig.class);
-
-	public static void setOptions(Options options) {
-		GlobalConfig.options = options;
+	static {
+	    setupOptions();
 	}
 
-	public static Options getOptions() {
-		if(options == null) {
-			try {
-				parse(null);
-			} catch (InvalidOptionException e) {
-			    log.error("Invalid options given.", e);
-			} catch (FileNotFoundException e) {
-                log.error("Given config file could not be found", e);
-            } catch (IOException e) {
-                log.error("Problem reading given config file", e);
+	public static Config get() { return config; }
+
+	/**
+	 *
+	 * @param args
+	 * @return The positional arguments from the command line arguments
+	 */
+	public static List<String> parse(String[] args) throws Exception {
+		CommandLine commandLine = new DefaultParser().parse(options, args);
+
+        List<BaseConfig> configs = new ArrayList<>();
+        configs.add(new CommandLineConfig(commandLine));
+        if(commandLine.hasOption(CONFIG)) {
+            for(String file : commandLine.getOptionValues(CONFIG)) {
+                configs.add(new PropertyFileConfig(file));
             }
-		}
-		return options;
+        }
+        configs.add(new DefaultsConfig());
+
+		config = new CompositeConfig(configs);
+
+		return Collections.unmodifiableList(commandLine.getArgList());
 	}
 
-	public static void parse(String[] args) throws InvalidOptionException, FileNotFoundException, IOException {
-		if(parser == null) {
-			setupOptions();
-		}
-
-		options = parser.parse(args);
-
-		String configFile = options.getString(CONFIG);
-		if(configFile != null) {
-		    Options fileOptions = parser.load(configFile);
-		    options = fileOptions.merge(options);
-		}
+	public static void printUsage() {
+	    new HelpFormatter().printHelp("Process and rename TV show video files", options);
 	}
 
 	private static void setupOptions() {
-		parser = new OptionParser();
+	    options = new Options()
+	        .addOption(Option.builder("h").longOpt("help").desc("Print this usage message").build())
+	        .addOption(Option.builder("P").longOpt("property").hasArgs().valueSeparator().build())
+	        .addOption(Option.builder().longOpt("clear-cache").desc("Clear cache and exit").build())
+	        .addOption(Option.builder("v").longOpt("version").desc("Print version and exit").build())
+	        .addOption(Option.builder("c").longOpt(CONFIG).hasArg().argName("config-file").build());
+
+		/*parser = new OptionParser();
 		parser.setUsage("Usage: Main [options] file [file ...]");
 
 		parser.addOption('l', "language", GlobalConfig.LANGUAGE, "Set the language for episode information.  Default is English", OptionParser.Action.STORE_VALUE, "en");
@@ -97,6 +102,6 @@ public class GlobalConfig {
 		        "Special Preprocessing Step: Process largest file in the parent directory only",
 		        OptionParser.Action.STORE_TRUE);
 
-		parser.addOption('c', "config", GlobalConfig.CONFIG, "The path to a properties file for configuration.", OptionParser.Action.STORE_VALUE);
+		parser.addOption('c', "config", GlobalConfig.CONFIG, "The path to a properties file for configuration.", OptionParser.Action.STORE_VALUE);*/
 	}
 }

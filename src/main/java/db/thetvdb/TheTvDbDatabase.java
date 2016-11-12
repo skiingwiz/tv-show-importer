@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
+import config.GlobalConfig;
 import data.Banner;
 import data.Episode;
 import data.Series;
@@ -40,7 +41,6 @@ import db.thetvdb.xml.BaseSeriesXmlHandler;
 import db.thetvdb.xml.EpisodeXmlHandler;
 import db.thetvdb.xml.MirrorXmlHandler;
 import db.thetvdb.xml.SeriesXmlHandler;
-import main.GlobalConfig;
 
 
 public class TheTvDbDatabase {
@@ -59,7 +59,7 @@ public class TheTvDbDatabase {
 
 	public TheTvDbDatabase(String lang) {
 		this.lang = lang;
-		String cacheName = GlobalConfig.getOptions().getString(GlobalConfig.CACHE_DIR);
+		String cacheName = GlobalConfig.get().getString(GlobalConfig.CACHE_DIR);
 		cacheDir = new File(cacheName);
 	}
 
@@ -87,7 +87,7 @@ public class TheTvDbDatabase {
 
 		if(!mirrorList.exists() ||
 	       (System.currentTimeMillis() - mirrorList.lastModified() >
-	       GlobalConfig.getOptions().getLong(GlobalConfig.MIRROR_FILE_LIFE))) {
+	       GlobalConfig.get().getLong(GlobalConfig.MIRROR_FILE_LIFE))) {
 			try {
 				getMirrorList();
 			} catch (DatabaseInitializationException die) {
@@ -158,7 +158,7 @@ public class TheTvDbDatabase {
 		if(fileD.exists()) {
 		    log.debug("Skipping fanart file {} because it already exists.", fileD.getPath());
 		} else {
-			String imageFormat = GlobalConfig.getOptions().getString(GlobalConfig.IMAGE_FORMAT);
+			String imageFormat = GlobalConfig.get().getString(GlobalConfig.IMAGE_FORMAT);
 
 			try {
 				BufferedImage im = ImageIO.read(bannerUrl);
