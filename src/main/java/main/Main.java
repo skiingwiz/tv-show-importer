@@ -159,7 +159,7 @@ public class Main {
                     b.getBannerType2().equalsIgnoreCase("graphical")) {
                 dir.append("Banners").append(File.separator);
             } else {
-                log.info("Skipping banner because it is of undesired type. Banner: {} Type: {} Type2: {}",
+                log.debug("Skipping banner because it is of undesired type. Banner: {} Type: {} Type2: {}",
                         b.getBannerName(), b.getBannerType(), b.getBannerType2());
                 continue;
             }
@@ -311,7 +311,7 @@ public class Main {
         }
 
         if(success) {
-            log.info("File renaming successful.");
+            log.info("File renaming successful: {}", newFile);
         } else {
             log.error("Failed to rename {} to {} after {} tries", f, newFile, numTries);
             throw new FailedRenameException(f, newFile);
