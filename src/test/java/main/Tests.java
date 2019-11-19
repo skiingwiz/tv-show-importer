@@ -1,22 +1,14 @@
 package main;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import javax.xml.parsers.SAXParserFactory;
+import java.io.File;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.xml.sax.InputSource;
-
-import data.Series;
-import db.thetvdb.xml.BaseSeriesXmlHandler;
-
-import static org.junit.Assert.*;
 
 public class Tests {
 
@@ -58,23 +50,9 @@ public class Tests {
         assertEquals(files[0].getName() + ".properties", files[1].getName());
     }
 
-	@Test
-	public void testBadUTFFileXml() throws Exception {
-	    File seriesIdFile = new File("src/test/resources/266967.xml");
 
-	    Series series = new Series();
-
-	    InputStream inputStream= new FileInputStream(seriesIdFile);
-	    Reader reader = new InputStreamReader(inputStream,"UTF-8");
-
-	    InputSource is = new InputSource(reader);
-	    is.setEncoding("UTF-8");
-        SAXParserFactory.newInstance().newSAXParser().parse(is/*seriesIdFile*/, new BaseSeriesXmlHandler(series));
-
-	}
-
-	@Test
-	public void testVersion() {
-	    System.out.println(Version.getFullNameVersion());
-	}
+    @Test
+    public void testVersion() {
+        System.out.println(Version.getFullNameVersion());
+    }
 }

@@ -3,27 +3,41 @@ package data;
 import java.io.File;
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 public class Episode {
 //TODO what about multipart episodes?
-
 	protected Series series;
+
+	@JsonProperty("airedSeason")
 	protected Integer seasonNum;
+
+	@JsonProperty("airedEpisodeNumber")
 	protected Integer episodeNum;
+
+	@JsonProperty("episodeName")
 	protected String episodeTitle;
+
+	@JsonProperty("siteRating")
 	private String rating;
+
+	@JsonProperty("overview")
 	private String description;
-	private String[] writer;
+
+	@JsonProperty("writers")
+	private String[] writers;
+
+	@JsonProperty("guestStars")
 	private String[] guestStars;
+
+	@JsonProperty("firstAired")
 	private Date firstAirDate;
+
+	@JsonIgnore
 	private String originalFile;
 
-	public String[] getWriter() {
-		return writer;
-	}
-	public void setWriter(String[] writer) {
-		this.writer = writer;
-	}
 	public Series getSeries() {
 		return series;
 	}
@@ -47,10 +61,10 @@ public class Episode {
 	}
 
 	public String[] getWriters() {
-		return writer;
+		return writers;
 	}
 	public void setWriters(String[] writer) {
-		this.writer = writer;
+		this.writers = writer;
 	}
 
 	public String[] getGuestStars() {

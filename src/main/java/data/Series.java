@@ -1,25 +1,53 @@
 package data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Series {
 	private String id;
+
+	@JsonIgnore
 	private String language;
+
+	@JsonProperty("seriesName")
 	private String name;
+
+	@JsonIgnore
 	private String originalName;
+
+	@JsonProperty("banner")
 	private String bannerLocation;
+
+	@JsonProperty("overview")
 	private String description;
+
+	@JsonProperty("firstAired")
 	private String firstAirDate;
+
 	private String imdbId;
+
 	private String zap2itId;
-	private long runtime;
+
+	@JsonProperty("siteRating")
 	private String starRating;
+
 	private String network;
+
 	private String[] genre;
+
+	@JsonProperty("rating")
 	private String contentRating;
+
+	@JsonProperty("airsTime")
 	private String airTime;
+
+	@JsonProperty("airsDayOfWeek")
 	private String airDay;
+
+	@JsonIgnore
 	private String[] actors;
 
-	public Series() {}
+	  public Series() {}
 
 	public Series(String bannerLocation, String description,
 			String firstAirDate, String id, String imdbId, String language,
@@ -133,18 +161,6 @@ public class Series {
 
 	public void setStarRating(String rating) {
 		this.starRating = rating;
-	}
-
-	/**
-	 * Set the runtime, in milliseconds
-	 * @param runtime the runtime, in milliseconds
-	 */
-	public void setRuntime(long runtime) {
-		this.runtime = runtime;
-	}
-
-	public long getRuntime() {
-		return runtime;
 	}
 
 	public String getStarRating() {

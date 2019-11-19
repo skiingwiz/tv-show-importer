@@ -1,6 +1,12 @@
 package db.thetvdb;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -9,12 +15,18 @@ import org.junit.rules.TemporaryFolder;
 import data.Episode;
 import db.DatabaseInitializationException;
 
-import static org.junit.Assert.*;
-
 public class TheTvDbTests {
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
+
+    private static Date date(int year, int month, int date) {
+        GregorianCalendar cal = new GregorianCalendar(TimeZone.getTimeZone("GMT"));
+        cal.clear();
+        cal.set(year, month - 1, date);
+
+        return cal.getTime();
+    }
 
     //This is a vanilla test that should work out of the box
     @Test
@@ -23,11 +35,15 @@ public class TheTvDbTests {
 
         Episode e = db.lookup("Bones", 5, 1);
 
+        assertNotNull("Episode is null", e);
+        assertNotNull("Series is null", e.getSeries());
         assertEquals("Episode title does not match", "Harbingers in the Fountain", e.getEpisodeTitle());
         assertEquals("Season number does not match", (Integer)5, e.getSeasonNum());
         assertEquals("Episode number does not match", (Integer)1, e.getEpisodeNum());
-
-        System.out.println(e);
+        assertEquals("Network does not match", "FOX", e.getSeries().getNetwork());
+        assertEquals("Air Date does not match", date(2009, 9, 17), e.getFirstAirDate());
+        assertEquals("Air Day does not match", "Tuesday", e.getSeries().getAirDay());
+        assertEquals("ID does not match", "75682", e.getSeries().getId());
     }
 
     //This is a test that requires a lookup override in the series id file
@@ -41,8 +57,7 @@ public class TheTvDbTests {
         assertEquals("Episode title does not match", "After The Storm", e.getEpisodeTitle());
         assertEquals("Season number does not match", (Integer)5, e.getSeasonNum());
         assertEquals("Episode number does not match", (Integer)1, e.getEpisodeNum());
-
-        System.out.println(e);
+        assertEquals("FOX", e.getSeries().getNetwork());
     }
 
     @Test
@@ -55,8 +70,10 @@ public class TheTvDbTests {
         assertEquals("Episode title does not match", "Diabetic Lesbians and a Blushing Bride", e.getEpisodeTitle());
         assertEquals("Season number does not match", (Integer)3, e.getSeasonNum());
         assertEquals("Episode number does not match", (Integer)12, e.getEpisodeNum());
-
-        System.out.println(e);
+        assertEquals("CBS", e.getSeries().getNetwork());
+        assertEquals("Air Date does not match", date(2016, 2, 18), e.getFirstAirDate());
+        assertEquals("Air Day does not match", "Thursday", e.getSeries().getAirDay());
+        assertEquals("ID does not match", "266967", e.getSeries().getId());
     }
 
     private TheTvDbDatabase givenDb() throws IOException, DatabaseInitializationException {

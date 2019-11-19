@@ -1,16 +1,35 @@
 package data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Banner {
-	String id;
-	String bannerPath;
-	String vignettePath;
-	String thumbnailPath;
-	String bannerType;
-	String bannerType2;
-	String colors;
-	String language;
-	String season;
-	
+	private String id;
+
+	@JsonProperty("fileName")
+	private String bannerPath;
+
+	@JsonIgnore
+	private String vignettePath;
+
+	@JsonProperty("thumbnail")
+	private String thumbnailPath;
+
+	@JsonProperty("keyType")
+	private String bannerType;
+
+	@JsonProperty("subKey")
+	private String bannerType2;
+
+	@JsonIgnore
+	private String colors;
+
+	@JsonProperty("languageId")//TODO, this is an int now
+	private String language;
+
+	@JsonIgnore
+	private String season;
+
 	public String getId() {
 		return id;
 	}
@@ -19,7 +38,7 @@ public class Banner {
 		int pos = bannerPath.lastIndexOf("/");
 		return bannerPath.substring(pos == -1 ? 0 : pos);
 	}
-	
+
 	public String getBannerPath() {
 		return bannerPath;
 	}
@@ -51,7 +70,7 @@ public class Banner {
 	public String getSeason() {
 		return season;
 	}
-	
+
 	public void setId(String id) {
 		this.id = id;
 	}
