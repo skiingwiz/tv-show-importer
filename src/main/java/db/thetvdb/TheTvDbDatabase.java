@@ -17,7 +17,6 @@ import java.util.Properties;
 import javax.imageio.ImageIO;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -401,7 +400,7 @@ public class TheTvDbDatabase {
     }
 
     private void checkToken() {
-        if(StringUtils.isEmpty(token)) {
+        if(token == null) {
             throw new IllegalStateException("No authentication token.  Login before invoking actions");
         }
     }
