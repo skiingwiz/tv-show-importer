@@ -9,13 +9,15 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
 import javax.imageio.ImageIO;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.groovy.parser.antlr4.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -44,6 +46,7 @@ public class TheTvDbDatabase {
     private static final String BASE_URL = "https://api.thetvdb.com";
     private static final String API_KEY = "3D94331EFB6E696C";
     private static final String SERIES_ID_FILE = "series_ids.dat";
+    private static final String BANNER_URL = "https://artworks.thetvdb.com/banners/";
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -108,14 +111,39 @@ public class TheTvDbDatabase {
         }
     }
 
-    public List<Banner> getBannerInfo(String series) throws DatabaseProcessingException {
-        String seriesId = getSeriesId(series);
+    public List<Banner> getBannerInfo(Series series) throws DatabaseProcessingException {
+        //TODO this should be a config value
+        List<String> keys = Arrays.asList(
+                "season",
+                "seasonwide",
+                "poster",
+                "fanart",
+                "series/graphical");
+
+        List<Banner> banners = new ArrayList<>();
+
+        for(String k : keys) {
+            String[] split = k.split("/", 2);
+            String key = split[0];
+            String subkey = split.length > 1 ? split[1] : null;
+
+            banners.addAll(getBannerInfo(series, key, subkey));
+        }
+
+        return banners;
+    }
+
+    private List<Banner> getBannerInfo(Series series, String key, String subkey) throws DatabaseProcessingException {
         URI uri;
         try {
-            uri = new URIBuilder()
-                    .setPathSegments("series", seriesId, "images", "query")
-                    //.addParameter("keyType", value)
-                    .build();
+
+            URIBuilder builder = new URIBuilder(BASE_URL)
+                    .setPathSegments("series", series.getId(), "images", "query")
+                    .addParameter("keyType", key);
+            if(subkey != null) {
+                builder.addParameter("subKey", subkey);
+            }
+            uri = builder.build();
         } catch (URISyntaxException e) {
             throw new DatabaseProcessingException("Failed to construct Banner URI", e);
         }
@@ -130,13 +158,10 @@ public class TheTvDbDatabase {
 
 
     public void downloadBanner(Banner banner, String dir) throws DatabaseProcessingException {
-        StringBuffer urlPath = new StringBuffer();
-        urlPath.append(BASE_URL).append("/banners/");
-        urlPath.append(banner.getBannerPath());
-
+        String urlPath = BANNER_URL + banner.getBannerPath();
         URL bannerUrl;
         try {
-            bannerUrl = new URL(urlPath.toString());
+            bannerUrl = new URL(urlPath);
         } catch (MalformedURLException e) {
             throw new DatabaseProcessingException("Could not retrieve series information.  Bad Url.  URL:" + urlPath.toString(), e);
         }

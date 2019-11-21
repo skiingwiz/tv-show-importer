@@ -1,6 +1,5 @@
 package data;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Banner {
@@ -8,9 +7,6 @@ public class Banner {
 
     @JsonProperty("fileName")
     private String bannerPath;
-
-    @JsonIgnore
-    private String vignettePath;
 
     @JsonProperty("thumbnail")
     private String thumbnailPath;
@@ -21,14 +17,8 @@ public class Banner {
     @JsonProperty("subKey")
     private String bannerType2;
 
-    @JsonIgnore
-    private String colors;
-
     @JsonProperty("languageId")//TODO, this is an int now
     private String language;
-
-    @JsonIgnore
-    private String season;
 
     public String getId() {
         return id;
@@ -43,10 +33,6 @@ public class Banner {
         return bannerPath;
     }
 
-    public String getVignettePath() {
-        return vignettePath;
-    }
-
     public String getThumbnailPath() {
         return thumbnailPath;
     }
@@ -59,16 +45,13 @@ public class Banner {
         return bannerType2;
     }
 
-    public String getColors() {
-        return colors;
-    }
-
     public String getLanguage() {
         return language;
     }
 
     public String getSeason() {
-        return season;
+        //If the banner type is "season" or "seasonwide" then the subkey is the season
+        return (bannerType != null && bannerType.startsWith("season")) ? bannerType2 : null;
     }
 
     public void setId(String id) {
@@ -77,10 +60,6 @@ public class Banner {
 
     public void setBannerPath(String bannerPath) {
         this.bannerPath = bannerPath;
-    }
-
-    public void setVignettePath(String vignettePath) {
-        this.vignettePath = vignettePath;
     }
 
     public void setThumbnailPath(String thumbnailPath) {
@@ -95,15 +74,13 @@ public class Banner {
         this.bannerType2 = bannerType2;
     }
 
-    public void setColors(String colors) {
-        this.colors = colors;
-    }
-
     public void setLanguage(String language) {
         this.language = language;
     }
 
-    public void setSeason(String season) {
-        this.season = season;
+    @Override
+    public String toString() {
+        return "Banner [id=" + id + ", bannerPath=" + bannerPath + ", thumbnailPath=" + thumbnailPath + ", bannerType="
+                + bannerType + ", bannerType2=" + bannerType2 + ", language=" + language + "]";
     }
 }

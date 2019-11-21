@@ -1,21 +1,26 @@
 package db.thetvdb;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.IOException;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.TimeZone;
 
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import data.Banner;
 import data.Episode;
 import db.DatabaseInitializationException;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
+
 public class TheTvDbTests {
+    private static final String LANG = "en";
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
@@ -76,8 +81,36 @@ public class TheTvDbTests {
         assertEquals("ID does not match", "266967", e.getSeries().getId());
     }
 
+    @Test
+    public void testBannerInfo() throws Exception {
+        TheTvDbDatabase db = givenDb();
+        Episode e = db.lookup("Bones", 5, 1);
+
+        List<Banner> banners = db.getBannerInfo(e.getSeries());
+
+        assertNotNull(banners);
+        assertFalse(banners.isEmpty());
+
+        for(Banner b : banners) {
+            System.out.println(b.getBannerPath());
+            assertNotNull(b);
+            assertNotNull(b.getBannerName());
+            assertNotNull(b.getBannerPath());
+            assertNotNull(b.getBannerType());
+            assertNotNull(b.getBannerType2());
+
+            if(b.getBannerType().startsWith("season")) {
+                assertNotNull(b.getSeason());
+                Integer.parseInt(b.getSeason());
+            } else {
+                assertNull(b.getSeason());
+            }
+
+        }
+    }
+
     private TheTvDbDatabase givenDb() throws IOException, DatabaseInitializationException {
-        TheTvDbDatabase db = new TheTvDbDatabase("en", folder.newFolder());
+        TheTvDbDatabase db = new TheTvDbDatabase(LANG, folder.newFolder());
         db.initialize();
 
         return db;

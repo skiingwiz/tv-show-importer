@@ -123,7 +123,7 @@ public class Main {
             return;
         }
 
-        List<Banner> banners = db.getBannerInfo(e.getSeries().getName());
+        List<Banner> banners = db.getBannerInfo(e.getSeries());
         for(Banner b : banners) {
             StringBuffer dir = new StringBuffer(fanartDir);
             if(!fanartDir.endsWith(File.separator)) {
