@@ -1,14 +1,15 @@
 package main;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class Tests {
 
@@ -45,9 +46,22 @@ public class Tests {
 
         File[] files = seasonDir.listFiles();
         assertEquals(2, files.length);
-        assertTrue(files[0].getName().startsWith("02x04"));
-        assertTrue(files[0].getName().endsWith(".mkv"));
-        assertEquals(files[0].getName() + ".properties", files[1].getName());
+
+        String name = null;
+        String propertiesName = null;
+        for(File f : files) {
+            assertTrue(f.getName().startsWith("02x04"));
+            if(f.getName().endsWith(".properties")) {
+                propertiesName = f.getName();
+            } else {
+                name = f.getName();
+            }
+        }
+        assertNotNull("No main file found", name);
+        assertNotNull("No properties file found", propertiesName);
+
+        assertTrue(name.endsWith(".mkv"));
+        assertEquals(name + ".properties", propertiesName);
     }
 
 

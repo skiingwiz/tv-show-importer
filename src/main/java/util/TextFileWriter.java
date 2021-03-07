@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import org.apache.commons.io.output.StringBuilderWriter;
+
 /**
  * A convenience class for writing to text files
  *
@@ -15,6 +17,10 @@ public class TextFileWriter {
     public TextFileWriter(String file) throws IOException {
         decoration = new PrintWriter(new BufferedWriter(new FileWriter(file)));
 
+    }
+
+    public TextFileWriter(StringBuilder sb) {
+        decoration = new PrintWriter(new StringBuilderWriter(sb));
     }
 
     public TextFileWriter print(boolean b) {

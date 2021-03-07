@@ -1,10 +1,10 @@
 package main;
 
-import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map.Entry;
 
 import data.Episode;
 import data.Series;
@@ -16,7 +16,6 @@ public class PropertiesFileWriter {
      */
     public static final String ITEM_SERPARATOR = ";";
     public static final String MAP_SEPARATOR = ":";
-    public static final String FILE_ENDING = ".properties";
 
     public static final String TITLE = "Title";
     public static final String ALBUM = "Album";
@@ -59,20 +58,11 @@ public class PropertiesFileWriter {
 
     private static final String X_ORIGINAL_FILE = "x-OriginalFileName";
     private static final String X_GENERATOR = "x-Generator";
-    private static final String TVDB_ID = "x-tvdb-id";
 
     private static final DateFormat YEAR_FORMAT = new SimpleDateFormat("yyyy");
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd");
 
-    public void writeFile(File videoFile, Episode e) throws IOException {
-        // Example of correct properties file naming:
-        // Video file: Movie.avi
-        // Properties file: Movie.avi.properties
-        // This is different than other conventions in Sage, so be careful
-
-        String filename = videoFile.getPath() + FILE_ENDING;
-        TextFileWriter out = new TextFileWriter(filename);
-
+    public void writeFile(TextFileWriter out, Episode e) throws IOException {
         /*
          * String title = formatTitle(e);
          * out.print(TITLE).print(MAP_SEPARATOR).println(title);
@@ -107,7 +97,9 @@ public class PropertiesFileWriter {
             if (s.getContentRating() != null)
                 out.print(RATED).print(MAP_SEPARATOR).println(s.getContentRating());
 
-            out.print(TVDB_ID).print(MAP_SEPARATOR).println(s.getId());
+            for(Entry<String, String> ent : s.getIds().entrySet()) {
+                out.print("x-" + ent.getKey() + "-id").print(MAP_SEPARATOR).println(ent.getValue());
+            }
             // Don't output running time. Sage takes that as the time of the video,
             // which it isn't (since the video has commercials removed). This causes
             // Sage to be inaccurate in it's determination of when to mark things

@@ -1,10 +1,16 @@
 package data;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Series {
     private String id;
+
+    private Map<String, String> ids = new HashMap<>();
 
     @JsonIgnore
     private String language;
@@ -15,18 +21,11 @@ public class Series {
     @JsonIgnore
     private String originalName;
 
-    @JsonProperty("banner")
-    private String bannerLocation;
-
     @JsonProperty("overview")
     private String description;
 
     @JsonProperty("firstAired")
     private String firstAirDate;
-
-    private String imdbId;
-
-    private String zap2itId;
 
     @JsonProperty("siteRating")
     private String starRating;
@@ -38,30 +37,11 @@ public class Series {
     @JsonProperty("rating")
     private String contentRating;
 
-    @JsonProperty("airsTime")
-    private String airTime;
-
-    @JsonProperty("airsDayOfWeek")
-    private String airDay;
-
     @JsonIgnore
     private String[] actors;
 
-    public Series() {}
-
-    public Series(String bannerLocation, String description,
-            String firstAirDate, String id, String imdbId, String language,
-            String name, String zap2itId) {
-        super();
-        this.bannerLocation = bannerLocation;
-        this.description = description;
-        this.firstAirDate = firstAirDate;
-        this.id = id;
-        this.imdbId = imdbId;
-        this.language = language;
-        this.name = name;
-        this.zap2itId = zap2itId;
-    }
+    @JsonIgnore
+    private Collection<Image> images;
 
     public String getId() {
         return id;
@@ -79,10 +59,6 @@ public class Series {
         return originalName;
     }
 
-    public String getBannerLocation() {
-        return bannerLocation;
-    }
-
     public String getDescription() {
         return description;
     }
@@ -91,12 +67,12 @@ public class Series {
         return firstAirDate;
     }
 
-    public String getImdbId() {
-        return imdbId;
+    public Collection<Image> getImages() {
+        return images;
     }
 
-    public String getZap2itId() {
-        return zap2itId;
+    public Map<String, String> getIds() {
+        return ids;
     }
 
     public void setId(String id) {
@@ -115,10 +91,6 @@ public class Series {
         this.originalName = originalName;
     }
 
-    public void setBannerLocation(String bannerLocation) {
-        this.bannerLocation = bannerLocation;
-    }
-
     public void setDescription(String description) {
         this.description = description;
     }
@@ -127,24 +99,8 @@ public class Series {
         this.firstAirDate = firstAirDate;
     }
 
-    public void setImdbId(String imdbId) {
-        this.imdbId = imdbId;
-    }
-
-    public void setZap2itId(String zap2itId) {
-        this.zap2itId = zap2itId;
-    }
-
     public void setActors(String[] actors) {
         this.actors = actors;
-    }
-
-    public void setAirDay(String day) {
-        this.airDay = day;
-    }
-
-    public void setAirTime(String time) {
-        this.airTime = time;
     }
 
     public void setContentRating(String rating) {
@@ -179,15 +135,19 @@ public class Series {
         return contentRating;
     }
 
-    public String getAirTime() {
-        return airTime;
-    }
-
-    public String getAirDay() {
-        return airDay;
-    }
-
     public String[] getActors() {
         return actors;
+    }
+
+    public void setImages(Collection<Image> images) {
+        this.images = images;
+    }
+
+    public void setIds(Map<String, String> ids) {
+        this.ids = ids;
+    }
+
+    public void addId(String name, String id) {
+        ids.put(name, id);
     }
 }

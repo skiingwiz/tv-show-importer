@@ -1,15 +1,15 @@
 package data.filter;
 
-import data.Banner;
+import data.Image;
 
-public class BannerFilter implements Filter<Banner> {
+public class BannerFilter implements Filter<Image> {
     private String lang;
 
     public BannerFilter(String lang) {
         this.lang = lang;
     }
     @Override
-    public boolean test(Banner item) {
+    public boolean test(Image item) {
         return item.getLanguage().equalsIgnoreCase(lang);
     }
 

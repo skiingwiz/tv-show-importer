@@ -1,22 +1,18 @@
 package db.thetvdb;
-import java.awt.image.BufferedImage;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
 
-import javax.imageio.ImageIO;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -27,64 +23,52 @@ import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import config.GlobalConfig;
-import data.Banner;
 import data.Episode;
+import data.Image;
+import data.Image.Type;
 import data.Series;
 import db.DatabaseInitializationException;
 import db.DatabaseProcessingException;
+import db.SeriesCache;
+import db.TvInfoSource;
+import util.io.UriUtils;
 
 
-public class TheTvDbDatabase {
+public class TheTvDbDatabase implements TvInfoSource {
     private static final String BASE_URL = "https://api.thetvdb.com";
     private static final String API_KEY = "3D94331EFB6E696C";
-    private static final String SERIES_ID_FILE = "series_ids.dat";
     private static final String BANNER_URL = "https://artworks.thetvdb.com/banners/";
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private ObjectMapper om;
 
-    private Properties seriesIds;
     private String lang;
-    private File cacheDir;
     private String token;
+
+    final private SeriesCache cache;
 
     public TheTvDbDatabase(String lang) {
         this.lang = lang;
-        String cacheName = GlobalConfig.get().getString(GlobalConfig.CACHE_DIR);
-        cacheDir = new File(cacheName);
+        cache = new SeriesCache("thetvdb");
     }
 
     public TheTvDbDatabase(String lang, File cacheDir) {
         this.lang = lang;
-        this.cacheDir = cacheDir;
+        cache = new SeriesCache("thetvdb", cacheDir);
     }
 
+    @Override
     public void clearCaches() {
-        if(cacheDir.exists()) {
-            for(File f : cacheDir.listFiles()) {
-                FileUtils.deleteQuietly(f);
-            }
-        }
+        cache.clear();
     }
 
+    @Override
     public void initialize() throws DatabaseInitializationException {
         om = new ObjectMapper();
         om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-        if(!cacheDir.exists()) {
-            if(!cacheDir.mkdirs()) {
-                throw new DatabaseInitializationException("Faile to create cache directory: " + cacheDir);
-            }
-        }
-
+        cache.initialize();
         login();
     }
 
@@ -97,7 +81,7 @@ public class TheTvDbDatabase {
             post.setEntity(new StringEntity(login.toString(), ContentType.APPLICATION_JSON));
 
             try(CloseableHttpResponse resp = HttpClients.createDefault().execute(post)) {
-                if(isSuccess(resp)) {
+                if(UriUtils.isSuccess(resp)) {
                     JsonNode root = om.readTree(resp.getEntity().getContent());
                     token = root.get("token").asText();
                 } else {
@@ -110,7 +94,7 @@ public class TheTvDbDatabase {
         }
     }
 
-    public List<Banner> getBannerInfo(Series series) throws DatabaseProcessingException {
+    private List<Image> getBannerInfo(Series series) throws DatabaseProcessingException {
         //TODO this should be a config value
         List<String> keys = Arrays.asList(
                 "season",
@@ -119,7 +103,7 @@ public class TheTvDbDatabase {
                 "fanart",
                 "series/graphical");
 
-        List<Banner> banners = new ArrayList<>();
+        List<Image> banners = new ArrayList<>();
 
         for(String k : keys) {
             String[] split = k.split("/", 2);
@@ -132,7 +116,7 @@ public class TheTvDbDatabase {
         return banners;
     }
 
-    private List<Banner> getBannerInfo(Series series, String key, String subkey) throws DatabaseProcessingException {
+    private List<Image> getBannerInfo(Series series, String key, String subkey) throws DatabaseProcessingException {
         URI uri;
         try {
 
@@ -149,48 +133,47 @@ public class TheTvDbDatabase {
 
 
         try(CloseableHttpResponse resp = get(uri)) {
-            return getJsonData(resp, new TypeReference<List<Banner>>() {});
+            List<Image> retVal = new ArrayList<>();
+            List<TvdbBanner> list = getJsonData(resp, new TypeReference<List<TvdbBanner>>() {});
+            for(TvdbBanner b : list) {
+                Image.Type type = getBannerType(b);
+                if(type != null) {
+                    Image image = new Image();
+                    image.setId(b.getId());
+                    image.setUrl(BANNER_URL + b.getBannerPath());
+                    image.setType(type);
+                    if(b.getBannerType().startsWith("season")) {
+                        image.setSeason(b.getBannerType2());
+                    }
+                    image.setName(Image.makeName(b.getBannerPath()));
+                    retVal.add(image);
+                }
+            }
+
+            return retVal;
         } catch(IOException e) {
             throw new DatabaseProcessingException("Failed to retrieve Banner information", e);
         }
     }
 
-
-    public void downloadBanner(Banner banner, String dir) throws DatabaseProcessingException {
-        String urlPath = BANNER_URL + banner.getBannerPath();
-        URL bannerUrl;
-        try {
-            bannerUrl = new URL(urlPath);
-        } catch (MalformedURLException e) {
-            throw new DatabaseProcessingException("Could not retrieve series information.  Bad Url.  URL:" + urlPath.toString(), e);
-        }
-
-        File dirF = new File(dir);
-        if(!dirF.exists() && !dirF.mkdirs()) {
-            System.err.println("Unable to make directory for storing fanart.  Directory: " + dir);
-        }
-
-        StringBuffer filename = new StringBuffer(dir);
-        if(!dir.endsWith(File.separator)) {
-            filename.append(File.separator);
-        }
-
-        filename.append(banner.getBannerName());
-        File fileD = new File(filename.toString());
-        if(fileD.exists()) {
-            log.debug("Skipping fanart file {} because it already exists.", fileD.getPath());
+    private Type getBannerType(TvdbBanner b) {
+        if(b.getBannerType().equalsIgnoreCase("season") ||
+                b.getBannerType().equalsIgnoreCase("seasonwide") ||
+                b.getBannerType().equalsIgnoreCase("poster")) {
+            return Image.Type.Poster;
+        } else if(b.getBannerType().equalsIgnoreCase("fanart")) {
+            return Image.Type.Background;
+        } else if(b.getBannerType().equalsIgnoreCase("series") &&
+                b.getBannerType2().equalsIgnoreCase("graphical")) {
+            return Image.Type.Banner;
         } else {
-            String imageFormat = GlobalConfig.get().getString(GlobalConfig.IMAGE_FORMAT);
-
-            try {
-                BufferedImage im = ImageIO.read(bannerUrl);
-                ImageIO.write(im, imageFormat, new File(filename.toString()));
-            } catch (IOException ioe) {
-                throw new DatabaseProcessingException("Failed to download banner.  Error: " + ioe.getMessage(), ioe);
-            }
+            log.debug("Skipping banner because it is of undesired type. Banner: {} Type: {} Type2: {}",
+                    b.getBannerName(), b.getBannerType(), b.getBannerType2());
+            return null;
         }
     }
 
+    @Override
     public Episode lookup(String series, int season, int episode) throws DatabaseProcessingException {
         String seriesId = getSeriesId(series);
         Episode e = null;
@@ -198,6 +181,7 @@ public class TheTvDbDatabase {
             System.err.println("Lookup failed because series id couldn't be found.  Series Name: " + series);
         } else {
             Series s = lookup(seriesId);
+            s.setImages(getBannerInfo(s));
             s.setName(series);
             e = getEpisodeInfo(seriesId, season, episode);
             e.setSeries(s);
@@ -207,14 +191,16 @@ public class TheTvDbDatabase {
     }
 
     public Series lookup(String seriesId) throws DatabaseProcessingException {
-        File seriesIdFile = new File(cacheDir,  seriesId + ".json");
-
-        if(!seriesIdFile.exists()) {
+        Series series = cache.getSeries(seriesId);
+        if(series == null) {
             try(CloseableHttpResponse resp = get(BASE_URL + "/series/" + seriesId)) {
                 JsonNode root = om.readTree(resp.getEntity().getContent());
                 if(root.has("data")) {
                     JsonNode data = root.get("data");
-                    om.writeValue(seriesIdFile, data);
+                    series = om.convertValue(data, Series.class);
+                    series.setOriginalName(series.getName());
+                    series.addId("tvdb", series.getId());
+                    cache.storeSeries(series);
                 } else {
                     //TODO error
                 }
@@ -224,21 +210,7 @@ public class TheTvDbDatabase {
             }
         }
 
-        Series series;
-        try {
-            series = om.readValue(seriesIdFile, Series.class);
-            series.setOriginalName(series.getName());
-        } catch (IOException e) {
-            log.error("Failed to parse series info JSON file {}", seriesIdFile, e);
-            throw new DatabaseProcessingException("Failed to parse series file", e);
-        }
-
         return series;
-    }
-
-    private static boolean isSuccess(CloseableHttpResponse resp) {
-        int code = resp.getStatusLine().getStatusCode();
-        return code >= 200 && code < 300;
     }
 
     private Episode getEpisodeInfo(String seriesId, int seasonNum, int episodeNum) throws DatabaseProcessingException {
@@ -275,41 +247,11 @@ public class TheTvDbDatabase {
     }
 
     private String getSeriesId(String seriesName) {
-        boolean writeUpdates = true;
-        File seriesIdFile = new File(cacheDir, SERIES_ID_FILE);
-
-        if(seriesIds == null) {
-            seriesIds = new Properties();
-            if(seriesIdFile.exists()) {
-                log.debug("Loading Series ID cache from ", seriesIdFile.getAbsolutePath());
-
-                try (InputStream in = FileUtils.openInputStream(seriesIdFile)){
-                    seriesIds.load(in);
-                } catch (IOException e) {
-                    writeUpdates = false;
-                    log.error("Could not load Series ID file {}.  Updates will not be written to disk.",
-                            seriesIdFile.getAbsolutePath(), e);
-                }
-
-            } else {
-                log.warn("Series ID cache file not found at {}", seriesIdFile.getAbsolutePath());
-            }
-        }
-
-        String id = seriesIds.getProperty(seriesName);
+        String id = cache.getSeriesId(seriesName);
         if(id == null) {
             id = lookupSeriesId(seriesName);
             if(id != null) {
-                seriesIds.put(seriesName, id);
-
-                if(writeUpdates) {
-                    try {
-                        seriesIds.store(new BufferedWriter(new FileWriter(seriesIdFile)), "");
-                    } catch (IOException e) {
-                        log.error("Could not save series id file {}.  Updates will not be written to disk.",
-                                seriesIdFile.getAbsolutePath(), e);
-                    }
-                }
+                cache.storeSeriesId(seriesName, id);
             }
         }
 
@@ -389,7 +331,7 @@ public class TheTvDbDatabase {
         get.addHeader("Accept-Language", lang);
 
         CloseableHttpResponse resp = HttpClients.createDefault().execute(get);
-        if(isSuccess(resp)) {
+        if(UriUtils.isSuccess(resp)) {
             return resp;
         } else {
             log.error("Received unsuccessful HTTP response {} - {}",

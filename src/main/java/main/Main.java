@@ -1,16 +1,22 @@
 package main;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.CopyOption;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.imageio.ImageIO;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.FileFilterUtils;
@@ -18,14 +24,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import config.GlobalConfig;
-import data.Banner;
+import data.Image;
 import data.Episode;
 import db.DatabaseProcessingException;
-import db.thetvdb.TheTvDbDatabase;
+import db.TvInfoSource;
+import db.TvInfoSourceFactory;
+import util.TextFileWriter;
 import util.ThreadUtils;
 
 public class Main {
-    private static TheTvDbDatabase db;
+    private static TvInfoSource db;
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -43,7 +51,7 @@ public class Main {
         }
 
         String lang = GlobalConfig.get().getString(GlobalConfig.LANGUAGE);
-        db = new TheTvDbDatabase(lang);
+        db = TvInfoSourceFactory.getInstance(lang);
 
         if(GlobalConfig.get().getBoolean(GlobalConfig.CLEAR_CACHE)) {
             db.clearCaches();
@@ -123,8 +131,8 @@ public class Main {
             return;
         }
 
-        List<Banner> banners = db.getBannerInfo(e.getSeries());
-        for(Banner b : banners) {
+        Collection<Image> banners = e.getSeries().getImages();
+        for(Image b : banners) {
             StringBuffer dir = new StringBuffer(fanartDir);
             if(!fanartDir.endsWith(File.separator)) {
                 dir.append(File.separator);
@@ -149,24 +157,21 @@ public class Main {
                 }
             }
 
-            if(b.getBannerType().equalsIgnoreCase("season") ||
-               b.getBannerType().equalsIgnoreCase("seasonwide") ||
-               b.getBannerType().equalsIgnoreCase("poster")) {
-                dir.append("Posters").append(File.separator);
-            } else if(b.getBannerType().equalsIgnoreCase("fanart")) {
-                dir.append("Backgrounds").append(File.separator);
-            } else if(b.getBannerType().equalsIgnoreCase("series") &&
-                    b.getBannerType2().equalsIgnoreCase("graphical")) {
-                dir.append("Banners").append(File.separator);
-            } else {
-                log.debug("Skipping banner because it is of undesired type. Banner: {} Type: {} Type2: {}",
-                        b.getBannerName(), b.getBannerType(), b.getBannerType2());
+            switch(b.getType()) {
+            case Poster:
+            case Background:
+            case Banner:
+                dir.append(b.getType()).append(File.separator);
+                break;
+            default:
+                log.debug("Skipping banner because it is of undesired type. Banner: {} Type: {}",
+                        b.getName(), b.getType());
                 continue;
             }
 
-            log.debug("Downloading banner {}", b.getBannerName());
+            log.debug("Downloading banner {}", b.getName());
             try {
-                db.downloadBanner(b, dir.toString());
+                downloadBanner(b, dir.toString());
             } catch(DatabaseProcessingException dbe) {
                 //TODO make a separate exception that inherits from DatabaseProcessingException
                 log.error("Failure downloading banner {} to {}", b, dir, dbe);
@@ -225,8 +230,16 @@ public class Main {
     }
 
     private void writeFile(File f, Episode e) {
+        // Example of correct properties file naming:
+        // Video file: Movie.avi
+        // Properties file: Movie.avi.properties
+        // This is different than other conventions in Sage, so be careful
+
+        String filename = f.getPath() + ".properties";
+
         try {
-            new PropertiesFileWriter().writeFile(f, e);
+            TextFileWriter out = new TextFileWriter(filename);
+            new PropertiesFileWriter().writeFile(out, e);
         } catch (IOException ioe) {
             log.error("Could not write episode {} properties file {}", e, f, ioe);
         }
@@ -318,5 +331,40 @@ public class Main {
         }
 
         return newFile;
+    }
+
+    public void downloadBanner(Image banner, String dir) throws DatabaseProcessingException {
+        String urlPath = banner.getUrl();
+        URL bannerUrl;
+        try {
+            bannerUrl = new URL(urlPath);
+        } catch (MalformedURLException e) {
+            throw new DatabaseProcessingException("Could not retrieve series information.  Bad Url.  URL:" + urlPath.toString(), e);
+        }
+
+        File dirF = new File(dir);
+        if(!dirF.exists() && !dirF.mkdirs()) {
+            System.err.println("Unable to make directory for storing fanart.  Directory: " + dir);
+        }
+
+        StringBuffer filename = new StringBuffer(dir);
+        if(!dir.endsWith(File.separator)) {
+            filename.append(File.separator);
+        }
+
+        filename.append(banner.getName());
+        File fileD = new File(filename.toString());
+        if(fileD.exists()) {
+            log.debug("Skipping fanart file {} because it already exists.", fileD.getPath());
+        } else {
+            String imageFormat = GlobalConfig.get().getString(GlobalConfig.IMAGE_FORMAT);
+
+            try {
+                BufferedImage im = ImageIO.read(bannerUrl);
+                ImageIO.write(im, imageFormat, new File(filename.toString()));
+            } catch (IOException ioe) {
+                throw new DatabaseProcessingException("Failed to download banner.  Error: " + ioe.getMessage(), ioe);
+            }
+        }
     }
 }

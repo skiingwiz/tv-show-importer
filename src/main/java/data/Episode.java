@@ -75,17 +75,6 @@ public class Episode {
         this.guestStars = guestStars;
     }
 
-    @Override
-    public String toString() {
-        StringBuffer sb = new StringBuffer();
-
-        sb.append("Show=").append(series == null ? "No Series" : series.getName()).append(",");
-        sb.append("Season=").append(seasonNum).append(",");
-        sb.append("Episode=").append(episodeNum);
-
-        return sb.toString();
-    }
-
     public String getRating() {
         return rating;
     }
@@ -117,5 +106,16 @@ public class Episode {
     }
     public String getOriginalFile() {
         return originalFile;
+    }
+
+    @Override
+    public String toString() {
+        StringBuffer sb = new StringBuffer();
+
+        sb.append("Show=").append(series == null ? "No Series" : series.getName()).append(",");
+        sb.append("Season=").append(seasonNum).append(",");
+        sb.append("Episode=").append(episodeNum);
+
+        return sb.toString();
     }
 }
