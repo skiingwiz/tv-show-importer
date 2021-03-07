@@ -1,0 +1,82 @@
+import java.text.SimpleDateFormat
+import org.apache.tools.ant.filters.ReplaceTokens
+
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath group: 'org.hibernate.build.gradle', name: 'version-injection-plugin', version: '1.0.0'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'eclipse'
+}
+apply plugin: 'version-injection'
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+version = '4.0.0'
+defaultTasks = ['clean','publish']
+
+sourceSets {
+    scripts
+}
+
+versionInjection {
+    into( 'main.Version', 'getVersionString' )
+}
+
+dependencies {
+   compile group: 'commons-cli', name: 'commons-cli', version: '[1.3.1, 2)'
+   compile group: 'commons-io', name: 'commons-io', version: '[2.4, 3)'
+   compile group: 'org.slf4j', name: 'slf4j-api', version: '[1.7, 1.8)'
+   compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '[4.5, 5)'
+   compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '[2.10, 3)'
+
+   runtime group: 'ch.qos.logback', name: 'logback-classic', version: '[1.2, 1.3)'
+   runtime group: 'ch.qos.logback', name: 'logback-core', version: '[1.2, 1.3)'
+   runtime group: 'org.codehaus.groovy', name: 'groovy', version: '[2.5, 2.6)'
+
+   testCompile group: 'junit', name: 'junit', version: '4.12+'
+}
+
+repositories {
+   mavenCentral()
+   jcenter()
+}
+
+processScriptsResources {
+    String classpath = configurations.runtime*.name.join(':')
+    String jarName = tasks.jar.outputs.files.singleFile.name
+
+    filter ReplaceTokens, tokens:['jar.name': jarName,
+        'classpath': classpath]
+}
+
+task publish(type: Zip, dependsOn: [build, processScriptsResources]) {
+    from tasks.jar.outputs.files
+    from tasks.processScriptsResources.outputs.files
+    from(configurations.runtime) { into 'lib' }
+}
+
+jar {
+   manifest {
+      attributes(
+          'Main-Class': 'main.Main',
+          'Built-By': System.properties['user.name'],
+          'Built-At': now('dd-MMM-yyyy HH:mm:ss'),
+          'Implementation-Version': version,
+          'Class-Path': configurations.runtime*.name.collect{"lib/$it"}.join(' ')
+      )
+   }
+}
+
+private String now(String format) {
+   return new SimpleDateFormat(format).format(new Date())
+}
