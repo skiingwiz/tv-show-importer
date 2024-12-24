@@ -33,10 +33,11 @@ public class SeriesCache {
         om = new ObjectMapper();
     }
 
-    public SeriesCache(String cacheName, File cacheDir) {
+    public SeriesCache(String cacheName, File cacheDir) throws DatabaseInitializationException {
         this.cacheDir = cacheDir;
         seriesIdFile = new File(cacheDir, SERIES_ID_FILE);
         om = new ObjectMapper();
+        initialize();
     }
 
 

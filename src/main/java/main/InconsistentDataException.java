@@ -1,5 +1,6 @@
 package main;
 
+@SuppressWarnings("serial")
 public class InconsistentDataException extends RuntimeException {
 
     public InconsistentDataException(String fieldName, Object val1, Object val2) {

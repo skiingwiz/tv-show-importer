@@ -2,7 +2,6 @@ package config;
 
 import org.junit.Test;
 
-import config.GlobalConfig;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 

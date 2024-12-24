@@ -46,7 +46,7 @@ public class TvMazeDataSource implements TvInfoSource {
         cache = new SeriesCache("tvmaze");
     }
 
-    protected TvMazeDataSource(File cacheDir) {
+    protected TvMazeDataSource(File cacheDir) throws DatabaseInitializationException {
         cache = new SeriesCache("tvmaze", cacheDir);
     }
 

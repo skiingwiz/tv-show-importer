@@ -1,5 +1,6 @@
 package main;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
@@ -30,11 +31,11 @@ public class Tests {
         File file4 = new File(dir, "2x04_some_file.mkv");
         File file5 = new File(dir, "1x05_some_file.mkv");
 
-        FileUtils.writeStringToFile(file1, "A string");
-        FileUtils.writeStringToFile(file2, "A string2");
-        FileUtils.writeStringToFile(file3, "A string33");
-        FileUtils.writeStringToFile(file4, "A string that is obviously the longest");
-        FileUtils.writeStringToFile(file5, "A string here too");
+        FileUtils.writeStringToFile(file1, "A string", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(file2, "A string2", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(file3, "A string33", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(file4, "A string that is obviously the longest", StandardCharsets.UTF_8);
+        FileUtils.writeStringToFile(file5, "A string here too", StandardCharsets.UTF_8);
 
         String[] args = {"-Pcache-dir=" + folder.newFolder().getAbsolutePath(),
                 "-Pno-fanart", "-Ppreprocess-largest-file-in-dir", file1.getAbsolutePath()};

@@ -36,8 +36,8 @@ public class FileParser {
     }
 
     private static final PathPattern[] FILE_NAME_PATTERNS = new PathPattern[] {
-        new PathPattern("(?<show>.*?)\\s*-\\s*(?<season>[0-9]?[0-9])(?<episode>[0-9][0-9]).*?", SHOW, SEASON, EPISODE),
-        new PathPattern("(?<show>.*?)\\s*-\\s*[Ss](?<season>[0-9]?[0-9])[Ee](?<episode>[0-9][0-9]).*?", SHOW, SEASON, EPISODE),
+        new PathPattern("(?<show>.*?)\\s*-\\s*(?<season>[0-9]?[0-9])[Xx _]?(?<episode>[0-9][0-9]).*?", SHOW, SEASON, EPISODE),
+        new PathPattern("(?<show>.*?)\\s*-\\s*[Ss](?<season>[0-9]?[0-9])[Xx _]?[Ee](?<episode>[0-9][0-9]).*?", SHOW, SEASON, EPISODE),
 
         new PathPattern("(?i)season *(?<season>[0-9]{1,2})", SEASON),
         new PathPattern("(?i)episode *(?<episode>[0-9]{1,2})", SEASON),

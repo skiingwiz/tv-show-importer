@@ -14,7 +14,7 @@ public class GlobalConfig {
     public static final String LANGUAGE = "language";
     public static final String RENAME = "rename";
     public static final String RENAME_PATTERN = "rename-pattern";
-    public static final String CLEAR_CACHE = "clearcache";
+    public static final String CLEAR_CACHE = "clear-cache";
     public static final String CACHE_DIR = "cache-dir";
     public static final String RECURSE = "recurse";
     public static final String SERIES_BANNERS = "series-banners";
@@ -29,6 +29,7 @@ public class GlobalConfig {
     public static final String LARGEST_FILE_IN_DIR = "preprocess-largest-file-in-dir";
 
     private static final String CONFIG = "config";
+    private static final String HELP = "help";
 
     private static CompositeConfig config;
     private static Options options;
@@ -49,6 +50,11 @@ public class GlobalConfig {
     public static List<String> parse(String[] args) throws Exception {
         CommandLine commandLine = new DefaultParser().parse(options, args);
 
+        if(commandLine.hasOption(HELP)) {
+            printUsage();
+            System.exit(0);
+        }
+
         List<BaseConfig> configs = new ArrayList<>();
         configs.add(new CommandLineConfig(commandLine));
         if (commandLine.hasOption(CONFIG)) {
@@ -64,13 +70,13 @@ public class GlobalConfig {
     }
 
     public static void printUsage() {
-        new HelpFormatter().printHelp("Process and rename TV show video files", options);
+        new HelpFormatter().printHelp("java -jar <this jar> [options] <file>", options);
     }
 
     private static void setupOptions() {
-        options = new Options().addOption(Option.builder("h").longOpt("help").desc("Print this usage message").build())
+        options = new Options().addOption(Option.builder("h").longOpt(HELP).desc("Print this usage message").build())
                 .addOption(Option.builder("P").longOpt("property").hasArgs().valueSeparator().build())
-                .addOption(Option.builder().longOpt("clear-cache").desc("Clear cache and exit").build())
+                .addOption(Option.builder().longOpt(CLEAR_CACHE).desc("Clear cache and exit").build())
                 .addOption(Option.builder("v").longOpt("version").desc("Print version and exit").build())
                 .addOption(Option.builder("c").longOpt(CONFIG).hasArg().argName("config-file").build());
 

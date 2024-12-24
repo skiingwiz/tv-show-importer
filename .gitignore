@@ -2,6 +2,7 @@
 .project
 .settings/
 .gradle/
+cache/
 build/
 bin/
 tvimporter.log
