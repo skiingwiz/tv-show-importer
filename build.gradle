@@ -4,7 +4,6 @@ import org.apache.tools.ant.filters.ReplaceTokens
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
     }
 
     dependencies {
@@ -74,7 +73,7 @@ jar {
       configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
    }
 
-   duplicatesStrategy 'exclude'
+   duplicatesStrategy = 'exclude'
 }
 
 private String now(String format) {
